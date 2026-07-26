@@ -519,7 +519,7 @@ const FALLBACK_DATA = {
     { "id": 11, "name": "柠檬酸镁",                    "spec": "1克",     "Na": 0,    "K": 0,    "Mg": 160,  "Ca": 0,   "Zn": 0 },
     { "id": 12, "name": "苏糖酸镁",                    "spec": "1克",     "Na": 0,    "K": 0,    "Mg": 80,   "Ca": 0,   "Zn": 0 },
     { "id": 13, "name": "甘氨酸镁",                    "spec": "1克",     "Na": 0,    "K": 0,    "Mg": 110,  "Ca": 0,   "Zn": 0 },
-    { "id": 14, "name": "五重镁代管胶囊",              "spec": "0.65g/粒", "Na": 0,    "K": 0,    "Mg": 63,   "Ca": 0,   "Zn": 0 },
+    { "id": 14, "name": "五重镁代灌胶囊",              "spec": "0.65g/粒", "Na": 0,    "K": 0,    "Mg": 63,   "Ca": 0,   "Zn": 0 },
     { "id": 15, "name": "普通盐",                      "spec": "1克",     "Na": 390,  "K": 0,    "Mg": 0,    "Ca": 0,   "Zn": 0 },
     { "id": 16, "name": "柠檬酸钾",                    "spec": "1克",     "Na": 0,    "K": 360,  "Mg": 0,    "Ca": 0,   "Zn": 0 },
     { "id": 17, "name": "抗坏血酸钠(Vc-钠)",            "spec": "1克",    "Na": 116,  "K": 0,    "Mg": 0,    "Ca": 0,   "Zn": 0 },
@@ -560,7 +560,7 @@ const FALLBACK_DATA = {
       {"pid":11,"content":160,"spec":"1克","label":"柠檬酸镁","icon":"💎","note":"镁含量最高"},
       {"pid":13,"content":110,"spec":"1克","label":"甘氨酸镁","icon":"🌿","note":"吸收率高，助眠"},
       {"pid":12,"content":80,"spec":"1克","label":"苏糖酸镁","icon":"🧠","note":"易入脑，对认知有益"},
-      {"pid":14,"content":63,"spec":"0.65g/粒","label":"五重镁代管胶囊","icon":"💊","note":"复合配方"}
+      {"pid":14,"content":63,"spec":"0.65g/粒","label":"五重镁代灌胶囊","icon":"💊","note":"复合配方"}
     ],
     "Zn":[
       {"pid":9,"content":29,"spec":"1g/天","label":"微量元素粉剂","icon":"🧪","note":"锌含量最高"},
@@ -726,7 +726,7 @@ function markSleepTaken(){
 function updateSleepStats(){const s=document.getElementById('sleepStats');s.style.display='block';document.getElementById('sleepCaStatus').textContent='🦴 钙 '+(sleepState.caTaken?'✓ 200mg':'✗');document.getElementById('sleepMgStatus').textContent='💎 镁 '+(sleepState.mgTaken?'✓ 已计入':'✗');}
 function populateSleepMg(){
   const sel=document.getElementById('sleepMgSelect');
-  const opts=[{pid:13,label:'甘氨酸镁（助眠）'},{pid:11,label:'柠檬酸镁'},{pid:12,label:'苏糖酸镁'},{pid:14,label:'五重镁代管胶囊'},{pid:19,label:'甜梦静息(原料粉)'},{pid:22,label:'甜梦静息代灌胶囊'}];
+  const opts=[{pid:13,label:'甘氨酸镁（助眠）'},{pid:11,label:'柠檬酸镁'},{pid:12,label:'苏糖酸镁'},{pid:14,label:'五重镁代灌胶囊'},{pid:19,label:'甜梦静息(原料粉)'},{pid:22,label:'甜梦静息代灌胶囊'}];
   sel.innerHTML='';opts.forEach(o=>{const opt=document.createElement('option');opt.value=o.pid;opt.textContent=o.label;sel.appendChild(opt);});
   sel.value=sleepState.mgPid;sel.addEventListener('change',function(){sleepState.mgPid=parseInt(this.value);updateSleepMgResult();saveSleepState();});
   document.getElementById('sleepMgQty').addEventListener('change',function(){const v=parseFloat(this.value)||1;sleepState.mgQty=Math.max(0.5,Math.min(10,v));this.value=sleepState.mgQty;updateSleepMgResult();saveSleepState();});
