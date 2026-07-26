@@ -6,370 +6,356 @@
 <title>钠、钾、镁、锌摄入计算器</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { font-size: 17px; }
+  html { font-size: 16px; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
-    background: #f5f7fa; color: #1a1a2e; line-height: 1.6; padding-bottom: 40px;
+    background: #f4f5f8; color: #1c1c2e; line-height: 1.5;
   }
-  .header {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    color: #fff; padding: 24px 16px 20px; text-align: center;
-    position: sticky; top: 0; z-index: 100;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
-  }
-  .header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: 1px; }
-  .header p { font-size: 0.85rem; opacity: 0.75; margin-top: 4px; }
-  .container { max-width: 500px; margin: 0 auto; padding: 12px 12px; }
 
-  /* ===== Loading State ===== */
+  /* ===== Loading ===== */
   .loading-screen {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: #f5f7fa; z-index: 9999;
+    position: fixed; inset: 0; background: #f4f5f8; z-index: 9999;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    transition: opacity 0.4s ease;
+    transition: opacity 0.35s ease;
   }
   .loading-screen.hidden { opacity: 0; pointer-events: none; }
   .loading-spinner {
-    width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top-color: #1a1a2e;
-    border-radius: 50%; animation: spin 0.8s linear infinite;
+    width: 36px; height: 36px; border: 3px solid #e0e0e0; border-top-color: #1c1c2e;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { margin-top: 16px; font-size: 0.9rem; color: #888; }
+  .loading-text { margin-top: 14px; font-size: 0.85rem; color: #999; }
+
+  /* ===== Header ===== */
+  .header {
+    background: linear-gradient(135deg, #1c1c2e 0%, #2a2a44 100%);
+    color: #fff; padding: 18px 16px 16px; text-align: center;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+  }
+  .header h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.5px; }
+  .header p { font-size: 0.78rem; opacity: 0.65; margin-top: 2px; }
+
+  .container { max-width: 480px; margin: 0 auto; padding: 10px; }
 
   /* ===== Error Banner ===== */
   .error-banner {
     display: none; background: #fff0f0; border: 1px solid #ffc0c0;
-    border-radius: 10px; padding: 14px 16px; margin-bottom: 14px;
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;
     font-size: 0.78rem; color: #c0392b; line-height: 1.6;
   }
   .error-banner.show { display: block; }
   .error-banner .retry-btn {
-    display: inline-block; margin-top: 8px; padding: 6px 14px;
+    display: inline-block; margin-top: 6px; padding: 5px 12px;
     border: 1px solid #c0392b; border-radius: 6px;
-    background: transparent; color: #c0392b; font-size: 0.78rem;
-    cursor: pointer; font-weight: 600;
+    background: transparent; color: #c0392b; font-size: 0.75rem; cursor: pointer; font-weight: 600;
   }
-  .error-banner .retry-btn:active { background: #fff0f0; }
 
-  .targets-summary {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;
+  /* ===== Summary Cards (2×2) ===== */
+  .summary-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;
   }
-  .target-card {
-    background: #fff; border-radius: 14px; padding: 16px 14px 14px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.06); position: relative; overflow: hidden;
-    border-top: 4px solid transparent;
+  .s-card {
+    background: #fff; border-radius: 12px; padding: 12px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05); position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
   }
-  .target-card .card-icon {
-    font-size: 1.5rem; line-height: 1; margin-bottom: 2px;
-    display: inline-block; vertical-align: middle; margin-right: 4px;
+  .s-card .s-row1 {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;
   }
-  .target-card .label {
-    font-size: 1.1rem; font-weight: 700; letter-spacing: 0.5px;
-    display: inline-block; vertical-align: middle;
+  .s-card .s-row1 .s-label {
+    font-size: 0.8rem; font-weight: 700; letter-spacing: 0.3px;
   }
-  .target-card .value {
-    font-size: 1.7rem; font-weight: 800; margin: 4px 0 0; letter-spacing: -0.5px;
-    line-height: 1.1;
+  .s-card .s-label-na { color: #4a90d9; }
+  .s-card .s-label-k  { color: #d4a030; }
+  .s-card .s-label-mg { color: #5cb85c; }
+  .s-card .s-label-zn { color: #9b59b6; }
+  .s-card .s-val {
+    font-size: 1.5rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.5px;
   }
-  .target-card .value .unit { font-size: 0.8rem; font-weight: 500; opacity: 0.6; margin-left: 2px; }
-  .target-card .target-range {
-    font-size: 0.7rem; opacity: 0.55; margin-top: 1px; font-weight: 400;
+  .s-card .s-val .u { font-size: 0.7rem; font-weight: 500; opacity: 0.5; margin-left: 1px; }
+  .s-card .s-range {
+    font-size: 0.62rem; opacity: 0.5; margin-top: 1px;
   }
-  .target-card .bar-wrap {
-    height: 6px; background: #eef0f5; border-radius: 4px; margin-top: 10px; overflow: hidden;
+  .s-card .bar-wrap {
+    height: 5px; background: #eef0f5; border-radius: 3px; margin-top: 8px; overflow: hidden;
   }
-  .target-card .bar {
-    height: 100%; border-radius: 4px; transition: width 0.5s cubic-bezier(0.25,0.46,0.45,0.94);
-    width: 0%;
+  .s-card .bar-fill {
+    height: 100%; border-radius: 3px; transition: width 0.45s ease; width: 0;
   }
-  .target-card .bar.over { background: #ff6b6b !important; }
-  .target-card .bar.warning { background: #feca57 !important; }
-  .target-card .badge-over {
-    position: absolute; top: 10px; right: 10px;
-    background: #ff6b6b; color: #fff;
-    font-size: 0.6rem; padding: 2px 8px; border-radius: 5px; font-weight: 700;
-    letter-spacing: 0.5px;
+  .s-card .bar-fill.over { background: #ff6b6b !important; }
+  .s-card .bar-fill.warn { background: #feca57 !important; }
+  .s-card .badge-over {
+    position: absolute; top: 8px; right: 8px;
+    background: #ff6b6b; color: #fff; font-size: 0.55rem;
+    padding: 1px 7px; border-radius: 5px; font-weight: 700;
   }
-  .target-card .badge-ok {
-    position: absolute; top: 10px; right: 10px;
-    background: #5cb85c; color: #fff;
-    font-size: 0.6rem; padding: 2px 8px; border-radius: 5px; font-weight: 700;
+  .bar-na { background: linear-gradient(90deg, #4a90d9, #6fb1fc); }
+  .bar-k  { background: linear-gradient(90deg, #d4a030, #f0c452); }
+  .bar-mg { background: linear-gradient(90deg, #5cb85c, #7ed37e); }
+  .bar-zn { background: linear-gradient(90deg, #9b59b6, #bb77dd); }
+
+  /* ===== Form ===== */
+  .form-card {
+    background: #fff; border-radius: 12px; padding: 12px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05); margin-bottom: 12px;
+    position: sticky; top: 68px; z-index: 90;
   }
-  .card-na { border-top-color: #4a90d9; }
-  .card-k  { border-top-color: #e8a838; }
-  .card-mg { border-top-color: #5cb85c; }
-  .card-zn { border-top-color: #9b59b6; }
-  .card-na .label { color: #4a90d9; }
-  .card-k .label  { color: #e8a838; }
-  .card-mg .label { color: #5cb85c; }
-  .card-zn .label { color: #9b59b6; }
-  .card-na .bar { background: linear-gradient(90deg, #4a90d9, #6fb1fc); }
-  .card-k .bar  { background: linear-gradient(90deg, #e8a838, #f5c452); }
-  .card-mg .bar { background: linear-gradient(90deg, #5cb85c, #7ed37e); }
-  .card-zn .bar { background: linear-gradient(90deg, #9b59b6, #bb77dd); }
-  .mg-sleep-note {
-    font-size: 0.62rem; color: #e67e22; margin-top: 8px; line-height: 1.4;
-    padding: 5px 8px; background: #fef9e7; border-radius: 6px;
-    display: flex; align-items: center; gap: 4px;
+  .form-row { display: flex; gap: 8px; align-items: center; }
+  .form-row select {
+    flex: 1; height: 42px; border: 1px solid #ddd; border-radius: 8px;
+    padding: 0 10px; font-size: 0.85rem; background: #fafbfc; color: #333;
+    min-width: 0;
   }
+  .form-row select:focus { outline: none; border-color: #4a90d9; box-shadow: 0 0 0 3px rgba(74,144,217,0.12); }
+  .qty-group { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+  .qty-group input {
+    width: 48px; height: 42px; text-align: center; border: 1px solid #ddd;
+    border-radius: 8px; font-size: 0.95rem; font-weight: 600; background: #fafbfc; color: #333;
+    -moz-appearance: textfield;
+  }
+  .qty-group input::-webkit-outer-spin-button,
+  .qty-group input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .qty-group button {
+    width: 36px; height: 36px; border: 1px solid #ddd; border-radius: 8px;
+    background: #fff; color: #1c1c2e; font-size: 1.1rem; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    user-select: none; touch-action: manipulation;
+  }
+  .qty-group button:active { background: #eef0f5; }
+  .btn-add {
+    height: 42px; min-width: 56px; border: none; border-radius: 8px;
+    background: #1c1c2e; color: #fff; font-size: 0.85rem; font-weight: 600;
+    cursor: pointer; white-space: nowrap; padding: 0 14px;
+  }
+  .btn-add:active { opacity: 0.85; }
+
+  /* ===== Items ===== */
   .section-title {
-    font-size: 0.95rem; font-weight: 600; color: #333;
-    margin: 16px 0 10px; display: flex; align-items: center; gap: 8px;
+    font-size: 0.85rem; font-weight: 600; color: #555;
+    margin: 0 0 8px; display: flex; align-items: center; gap: 6px;
   }
   .section-title .count {
-    background: #e8ecf1; font-size: 0.75rem; padding: 1px 8px; border-radius: 10px;
-    font-weight: 500; color: #666;
+    background: #e8ecf1; font-size: 0.7rem; padding: 1px 8px; border-radius: 10px;
+    font-weight: 500; color: #777;
   }
-  .add-form {
-    background: #fff; border-radius: 12px; padding: 16px;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.06); margin-bottom: 14px;
-  }
-  .form-row { display: flex; gap: 10px; align-items: flex-end; }
-  .form-group { flex: 1; }
-  .form-group label {
-    display: block; font-size: 0.78rem; color: #888; font-weight: 500; margin-bottom: 4px;
-  }
-  .form-group select, .form-group input {
-    width: 100%; height: 44px; border: 1px solid #ddd; border-radius: 8px;
-    padding: 0 10px; font-size: 0.9rem; background: #fafbfc; color: #333;
-    appearance: auto; -webkit-appearance: auto;
-  }
-  .qty-stepper {
-    display: flex; align-items: center; gap: 4px;
-  }
-  .qty-stepper input {
-    width: 60px; height: 44px; text-align: center; flex-shrink: 0;
-    border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; font-weight: 600;
-    background: #fafbfc; color: #333; -moz-appearance: textfield;
-  }
-  .qty-stepper input::-webkit-outer-spin-button,
-  .qty-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-  .stepper-btn {
-    width: 40px; height: 40px; border: 1px solid #ddd; border-radius: 8px;
-    background: #fff; color: #1a1a2e; font-size: 1.2rem; font-weight: 600;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    transition: all 0.15s; user-select: none; touch-action: manipulation;
-  }
-  .stepper-btn:active { background: #eef0f5; transform: scale(0.94); }
-  .form-group select:focus, .form-group input:focus {
-    outline: none; border-color: #4a90d9; box-shadow: 0 0 0 3px rgba(74,144,217,0.12);
-  }
-  .btn-add {
-    height: 44px; min-width: 64px; border: none; border-radius: 8px;
-    background: #1a1a2e; color: #fff; font-size: 0.9rem; font-weight: 600;
-    cursor: pointer; transition: all 0.2s; white-space: nowrap;
-  }
-  .btn-add:active { transform: scale(0.96); background: #333; }
-  .item-list { margin-bottom: 14px; }
+  .item-list { margin-bottom: 10px; }
   .item-card {
-    background: #fff; border-radius: 10px; padding: 12px 14px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05); margin-bottom: 8px;
-    display: flex; align-items: center; gap: 10px;
-    animation: slideIn 0.25s ease;
+    background: #fff; border-radius: 10px; padding: 10px 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04); margin-bottom: 6px;
+    display: flex; align-items: center; gap: 8px;
+    animation: in 0.2s ease;
   }
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateY(-8px); }
-    to { opacity: 1; transform: translateY(0); }
+  @keyframes in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  .item-card .info { flex: 1; min-width: 0; }
+  .item-card .name { font-size: 0.82rem; font-weight: 600; color: #333; }
+  .item-card .spec { font-size: 0.7rem; color: #aaa; margin-top: 1px; }
+  .item-card .nuts {
+    display: flex; gap: 5px; margin-top: 3px; flex-wrap: wrap;
   }
-  .item-card .item-info { flex: 1; min-width: 0; }
-  .item-card .item-name { font-size: 0.9rem; font-weight: 600; color: #333; }
-  .item-card .item-spec {
-    font-size: 0.76rem; color: #999; margin-top: 1px;
+  .item-card .nuts span {
+    font-size: 0.65rem; color: #666; background: #f0f2f6; padding: 1px 6px; border-radius: 4px;
   }
-  .item-card .item-nutrients {
-    display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap;
-  }
-  .item-card .item-nutrients span {
-    font-size: 0.72rem; color: #666; background: #f0f2f6; padding: 1px 6px; border-radius: 4px;
-  }
-  .item-card .item-qty {
-    font-size: 0.85rem; font-weight: 600; color: #1a1a2e;
-    background: #eef0f5; padding: 4px 10px; border-radius: 6px; text-align: center;
-    min-width: 36px;
+  .item-card .qty-badge {
+    font-size: 0.8rem; font-weight: 600; color: #1c1c2e;
+    background: #eef0f5; padding: 3px 8px; border-radius: 6px; text-align: center;
+    min-width: 32px; flex-shrink: 0;
   }
   .item-card .btn-del {
-    width: 34px; height: 34px; border: none; border-radius: 50%;
-    background: #fee; color: #e74c3c; font-size: 1rem; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.2s; flex-shrink: 0;
+    width: 30px; height: 30px; border: none; border-radius: 50%;
+    background: #fee; color: #e74c3c; font-size: 0.85rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
   .item-card .btn-del:active { background: #fdd; transform: scale(0.9); }
   .empty-state {
-    text-align: center; padding: 30px 16px; color: #bbb; font-size: 0.85rem;
+    text-align: center; padding: 28px 16px; color: #bbb; font-size: 0.8rem;
   }
-  .empty-state .icon { font-size: 2.5rem; margin-bottom: 8px; opacity: 0.4; }
-  .tips {
-    background: #fff; border-radius: 12px; padding: 14px 16px;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.06); margin-bottom: 14px;
-  }
-  .tips h3 { font-size: 0.82rem; color: #333; margin-bottom: 8px; }
-  .tips ul { list-style: none; padding: 0; }
-  .tips li {
-    font-size: 0.75rem; color: #666; padding: 3px 0; line-height: 1.5;
-  }
-  .tips li::before { content: "\1F4A1 "; }
+  .empty-state .icon { font-size: 2.2rem; margin-bottom: 6px; opacity: 0.35; }
+
   .btn-clear {
-    display: block; width: 100%; padding: 12px;
-    border: none; border-radius: 10px;
-    background: #fff; color: #e74c3c; font-size: 0.85rem; font-weight: 600;
-    cursor: pointer; transition: all 0.2s; margin-bottom: 10px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-    letter-spacing: 0.5px;
+    display: block; width: 100%; padding: 10px; border: none; border-radius: 10px;
+    background: #fff; color: #e74c3c; font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.04);
   }
-  .btn-clear:active { background: #fff5f5; transform: scale(0.98); }
-  .btn-suggest {
-    display: block; width: 100%; padding: 13px; border: none; border-radius: 10px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #fff; font-size: 0.9rem; font-weight: 600; letter-spacing: 1px;
-    cursor: pointer; transition: all 0.2s; margin-bottom: 14px;
-    box-shadow: 0 2px 8px rgba(102,126,234,0.3);
+  .btn-clear:active { background: #fff5f5; }
+
+  /* ===== Suggestions ===== */
+  .suggest-card {
+    background: #fff; border-radius: 12px; box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+    margin-bottom: 12px; overflow: hidden;
   }
-  .btn-suggest:active { transform: scale(0.97); opacity: 0.9; }
-  .btn-suggest:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-  .suggest-box {
-    background: #fff; border-radius: 12px; padding: 16px;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.06); margin-bottom: 14px;
-    display: none;
+  .suggest-header {
+    padding: 12px 14px; display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; user-select: none;
   }
-  .suggest-box.show { display: block; }
-  .suggest-box h3 {
-    font-size: 0.85rem; font-weight: 700; color: #333; margin-bottom: 12px;
-    display: flex; align-items: center; gap: 6px;
+  .suggest-header h3 { font-size: 0.82rem; font-weight: 700; color: #333; display: flex; align-items: center; gap: 5px; }
+  .suggest-header .arrow { font-size: 0.8rem; color: #999; transition: transform 0.2s; }
+  .suggest-header .arrow.open { transform: rotate(180deg); }
+  .suggest-body { padding: 0 14px 14px; display: none; }
+  .suggest-body.open { display: block; }
+  .suggest-body .s-summary {
+    font-size: 0.75rem; color: #666; line-height: 1.6; margin-bottom: 10px;
+    padding: 8px 10px; background: #f8f9ff; border-radius: 8px; border-left: 3px solid #667eea;
   }
-  .suggest-box .s-summary {
-    font-size: 0.78rem; color: #666; line-height: 1.6; margin-bottom: 12px;
-    padding: 10px 12px; background: #f8f9ff; border-radius: 8px; border-left: 3px solid #667eea;
+  .suggest-body .s-allset {
+    text-align: center; padding: 16px; color: #5cb85c; font-size: 0.85rem; font-weight: 600;
   }
-  .suggest-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 0; border-bottom: 1px solid #f0f0f0;
-  }
-  .suggest-item:last-child { border-bottom: none; }
-  .suggest-item .s-icon {
-    width: 36px; height: 36px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1rem; flex-shrink: 0;
-  }
-  .suggest-item .s-icon.na { background: #e8f0fe; }
-  .suggest-item .s-icon.k  { background: #fef6e8; }
-  .suggest-item .s-icon.mg { background: #e8f8e8; }
-  .suggest-item .s-icon.ca { background: #f0e8f8; }
-  .suggest-item .s-icon.zn { background: #f3e8f8; }
-  .suggest-item .s-info { flex: 1; }
-  .suggest-item .s-info .s-action { font-size: 0.8rem; font-weight: 600; color: #333; }
-  .suggest-item .s-info .s-detail { font-size: 0.72rem; color: #888; margin-top: 1px; }
-  .suggest-item .s-info .s-detail span { color: #667eea; font-weight: 600; }
-  .suggest-item .s-btn-add {
-    padding: 6px 12px; border: 1px solid #667eea; border-radius: 6px;
-    background: transparent; color: #667eea; font-size: 0.72rem; font-weight: 600;
-    cursor: pointer; white-space: nowrap; transition: all 0.15s;
-  }
-  .suggest-item .s-btn-add:active { background: #667eea; color: #fff; }
-  .suggest-allset {
-    text-align: center; padding: 20px; color: #5cb85c; font-size: 0.9rem; font-weight: 600;
-  }
-  .suggest-allset .icon { font-size: 2rem; margin-bottom: 6px; }
-  .sleep-section {
-    background: linear-gradient(135deg, #1a1a2e 0%, #2d2440 100%);
-    color: #fff; border-radius: 14px; padding: 16px; margin-bottom: 14px;
-    overflow: hidden;
-  }
-  .sleep-section .sleep-header {
-    font-size: 1rem; font-weight: 700; margin-bottom: 14px;
+  .suggest-body .s-allset .icon { font-size: 1.8rem; margin-bottom: 4px; }
+  .s-item {
     display: flex; align-items: center; gap: 8px;
+    padding: 8px 0; border-bottom: 1px solid #f0f0f0;
   }
-  .sleep-row {
-    display: flex; align-items: center; gap: 10px; padding: 10px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-  }
-  .sleep-row:last-child { border-bottom: none; }
-  .sleep-row .sleep-icon {
-    width: 36px; height: 36px; border-radius: 50%;
+  .s-item:last-child { border-bottom: none; }
+  .s-item .si-icon {
+    width: 32px; height: 32px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-size: 0.9rem; flex-shrink: 0;
   }
-  .sleep-row .sleep-icon.ca { background: rgba(142,108,199,0.25); }
-  .sleep-row .sleep-icon.mg { background: rgba(92,184,92,0.25); }
-  .sleep-row .sleep-info { flex: 1; min-width: 0; }
-  .sleep-row .sleep-info .sleep-label { font-size: 0.85rem; font-weight: 600; }
-  .sleep-row .sleep-info .sleep-detail { font-size: 0.75rem; opacity: 0.6; margin-top: 1px; }
-  .sleep-check {
-    width: 26px; height: 26px; border-radius: 50%; border: 2px solid #666;
+  .s-item .si-icon.na { background: #e8f0fe; }
+  .s-item .si-icon.k  { background: #fef6e8; }
+  .s-item .si-icon.mg { background: #e8f8e8; }
+  .s-item .si-icon.zn { background: #f3e8f8; }
+  .s-item .si-icon.ca { background: #f0e8f8; }
+  .s-item .si-info { flex: 1; min-width: 0; }
+  .s-item .si-info .si-action { font-size: 0.75rem; font-weight: 600; color: #333; }
+  .s-item .si-info .si-detail { font-size: 0.68rem; color: #999; margin-top: 1px; }
+  .s-item .si-info .si-detail span { color: #667eea; font-weight: 600; }
+  .s-item .si-btn {
+    padding: 5px 10px; border: 1px solid #667eea; border-radius: 6px;
+    background: transparent; color: #667eea; font-size: 0.68rem; font-weight: 600;
+    cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  }
+  .s-item .si-btn:active { background: #667eea; color: #fff; }
+  .s-combo-box {
+    background: #faf8ff; border-radius: 10px; padding: 10px 12px;
+    margin: 6px 0 10px; border: 1px solid #e8e0ff;
+  }
+  .s-combo-box .sc-title { font-size: 0.75rem; font-weight: 600; color: #764ba2; margin-bottom: 6px; }
+  .s-combo-box .sc-row { display: flex; align-items: center; gap: 8px; }
+  .s-combo-box .sc-info { flex: 1; min-width: 0; }
+  .s-combo-box .sc-info .sc-name { font-size: 0.78rem; font-weight: 600; color: #333; }
+  .s-combo-box .sc-info .sc-detail { font-size: 0.68rem; color: #666; margin-top: 2px; }
+  .s-combo-box .sc-info .sc-proj { font-size: 0.62rem; color: #999; margin-top: 1px; }
+  .s-combo-box .sc-btn {
+    padding: 5px 10px; border: 1px solid #764ba2; border-radius: 6px;
+    background: transparent; color: #764ba2; font-size: 0.68rem; font-weight: 600;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .s-combo-box .sc-btn:active { background: #764ba2; color: #fff; }
+
+  /* ===== Sleep Section (light) ===== */
+  .sleep-card {
+    background: #fff; border-radius: 12px; padding: 14px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05); margin-bottom: 12px;
+  }
+  .sleep-card .sl-header {
+    font-size: 0.85rem; font-weight: 700; color: #333;
+    display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+  }
+  .sleep-row {
+    display: flex; align-items: center; gap: 8px; padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .sleep-row:last-child { border-bottom: none; }
+  .sl-icon {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 0.85rem; flex-shrink: 0;
+  }
+  .sl-icon.ca { background: #f0e8f8; }
+  .sl-icon.mg { background: #e8f8e8; }
+  .sl-info { flex: 1; min-width: 0; }
+  .sl-info .sl-label { font-size: 0.8rem; font-weight: 600; color: #333; }
+  .sl-info .sl-detail { font-size: 0.7rem; color: #999; margin-top: 1px; }
+  .sl-check {
+    width: 24px; height: 24px; border-radius: 50%; border: 2px solid #ddd;
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.7rem; cursor: pointer; flex-shrink: 0;
-    transition: all 0.2s; background: transparent; color: transparent;
+    font-size: 0.65rem; cursor: pointer; flex-shrink: 0;
+    transition: all 0.15s; background: transparent; color: transparent;
   }
-  .sleep-check.done { border-color: #5cb85c; background: #5cb85c; color: #fff; }
-  .sleep-mg-select {
-    display: flex; align-items: center; gap: 8px; margin-top: 4px;
+  .sl-check.done { border-color: #5cb85c; background: #5cb85c; color: #fff; }
+  .sl-mg-ctrl {
+    display: flex; align-items: center; gap: 6px; margin-top: 3px;
   }
-  .sleep-mg-select select {
-    height: 32px; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px;
-    background: rgba(255,255,255,0.08); color: #fff; font-size: 0.75rem;
-    padding: 0 6px; flex: 1; min-width: 0;
+  .sl-mg-ctrl select {
+    height: 30px; border: 1px solid #ddd; border-radius: 6px;
+    background: #fafbfc; color: #333; font-size: 0.72rem; padding: 0 6px; flex: 1; min-width: 0;
   }
-  .sleep-mg-select select option { background: #2d2440; color: #fff; }
-  .sleep-mg-stepper {
-    display: flex; align-items: center; gap: 3px;
+  .sl-mg-ctrl .mg-step {
+    display: flex; align-items: center; gap: 2px;
   }
-  .sleep-mg-stepper button {
-    width: 28px; height: 28px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2);
-    background: rgba(255,255,255,0.08); color: #fff; font-size: 0.9rem;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  .sl-mg-ctrl .mg-step button {
+    width: 26px; height: 26px; border: 1px solid #ddd; border-radius: 6px;
+    background: #fff; color: #333; font-size: 0.85rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
   }
-  .sleep-mg-stepper button:active { background: rgba(255,255,255,0.2); }
-  .sleep-mg-stepper input {
-    width: 40px; height: 28px; text-align: center; border: none; border-radius: 4px;
-    background: rgba(255,255,255,0.1); color: #fff; font-size: 0.8rem; font-weight: 600;
+  .sl-mg-ctrl .mg-step button:active { background: #eef0f5; }
+  .sl-mg-ctrl .mg-step input {
+    width: 36px; height: 26px; text-align: center; border: 1px solid #ddd;
+    border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: #fafbfc; color: #333;
     -moz-appearance: textfield;
   }
-  .sleep-mg-stepper input::-webkit-outer-spin-button,
-  .sleep-mg-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-  .sleep-mg-result {
-    font-size: 0.7rem; opacity: 0.7; margin-top: 3px;
+  .sl-mg-ctrl .mg-step input::-webkit-outer-spin-button,
+  .sl-mg-ctrl .mg-step input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .sl-mg-result { font-size: 0.68rem; color: #999; margin-top: 2px; }
+  .sl-btn-mark {
+    width: 100%; padding: 9px; border: 1px solid #ddd; border-radius: 8px;
+    background: #fafbfc; color: #666; font-size: 0.75rem; font-weight: 600;
+    cursor: pointer; margin-top: 8px; transition: all 0.15s;
   }
-  .sleep-btn-mark {
-    width: 100%; padding: 10px; border: none; border-radius: 8px;
-    background: rgba(255,255,255,0.12); color: #fff; font-size: 0.8rem; font-weight: 600;
-    cursor: pointer; margin-top: 10px; transition: all 0.2s;
+  .sl-btn-mark:active { background: #eef0f5; }
+  .sl-btn-mark.done { background: #e8f8e8; border-color: #5cb85c; color: #5cb85c; }
+  .sl-stats {
+    display: flex; gap: 10px; margin-top: 8px;
+    font-size: 0.68rem; color: #999;
   }
-  .sleep-btn-mark:active { background: rgba(255,255,255,0.2); }
-  .sleep-btn-mark.done { background: rgba(92,184,92,0.3); color: #5cb85c; }
-  .sleep-stats {
-    display: flex; gap: 12px; margin-top: 10px;
-    font-size: 0.7rem; opacity: 0.6;
+  .sl-stats span { display: flex; align-items: center; gap: 3px; }
+  .sl-tip {
+    font-size: 0.62rem; color: #e67e22; margin-top: 8px; line-height: 1.4;
+    padding: 5px 8px; background: #fef9e7; border-radius: 6px;
   }
-  .sleep-stats span { display: flex; align-items: center; gap: 4px; }
+
+  /* ===== Footer ===== */
+  .tips-card {
+    background: #fff; border-radius: 12px; padding: 12px 14px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05); margin-bottom: 12px;
+  }
+  .tips-card .tips-header {
+    font-size: 0.78rem; font-weight: 600; color: #999; margin-bottom: 6px;
+  }
+  .tips-card .tips-header span { cursor: pointer; }
+  .tips-card .tips-header .arrow { font-size: 0.7rem; display: inline-block; transition: transform 0.2s; margin-left: 3px; }
+  .tips-card .tips-header .arrow.open { transform: rotate(180deg); }
+  .tips-card .tips-body { display: none; }
+  .tips-card .tips-body.open { display: block; }
+  .tips-card ul { list-style: none; }
+  .tips-card li {
+    font-size: 0.7rem; color: #888; padding: 2px 0; line-height: 1.5;
+  }
+
   .footer {
-    text-align: center; padding: 20px 16px 10px;
-    font-size: 0.7rem; color: #bbb;
+    text-align: center; padding: 16px 16px 8px;
+    font-size: 0.65rem; color: #ccc;
   }
   .disclaimer {
     background: #fff8e8; border: 1px solid #f0dca0; border-radius: 10px;
-    padding: 12px 14px; margin-bottom: 14px;
-    font-size: 0.72rem; color: #8a6d2b; line-height: 1.7;
+    padding: 10px 12px; margin-bottom: 12px;
+    font-size: 0.68rem; color: #8a6d2b; line-height: 1.6;
   }
   .disclaimer strong { font-weight: 700; }
-  @media (max-width: 380px) {
-    .form-row { flex-wrap: wrap; }
-    .form-group select { width: 100%; }
-    .targets-summary { gap: 8px; }
-    .target-card { padding: 14px 12px 12px; }
-    .target-card .value { font-size: 1.4rem; }
-  }
 </style>
 </head>
 <body>
 
-<!-- ===== Loading Screen ===== -->
+<!-- ===== Loading ===== -->
 <div class="loading-screen" id="loadingScreen">
   <div class="loading-spinner"></div>
   <div class="loading-text">正在加载产品数据...</div>
 </div>
 
+<!-- ===== Header ===== -->
 <div class="header">
-  <h1>📊 钠 | 钾 | 镁 | 锌 摄入计算器</h1>
-  <p>选择产品 · 计算每日钠钾镁锌总量</p>
+  <h1>📊 钠 · 钾 · 镁 · 锌</h1>
+  <p>选择产品，计算每日摄入总量</p>
 </div>
 
 <div class="container">
@@ -380,143 +366,146 @@
     <br><button class="retry-btn" onclick="loadData()">重新加载</button>
   </div>
 
-  <!-- ===== Daily Targets Summary ===== -->
-  <div class="targets-summary" id="summaryCards">
-    <div class="target-card card-na">
-      <div><span class="card-icon">🧂</span><span class="label">钠 Na</span></div>
-      <div class="value"><span id="totalNa">--</span><span class="unit">mg</span></div>
-      <div class="target-range">目标 3900–5850 mg</div>
-      <div class="bar-wrap"><div class="bar" id="barNa" style="width:0%"></div></div>
-      <div class="badge-over" id="badgeNa" style="display:none">⚠ 超标</div>
+  <!-- ===== Summary Cards ===== -->
+  <div class="summary-grid" id="summaryGrid">
+    <div class="s-card">
+      <div class="s-row1">
+        <span class="s-label s-label-na">🧂 钠 Na</span>
+        <span class="badge-over" id="badgeNa" style="display:none">⚠ 超标</span>
+      </div>
+      <div class="s-val"><span id="totalNa">--</span><span class="u">mg</span></div>
+      <div class="s-range">3900–5850 mg</div>
+      <div class="bar-wrap"><div class="bar-fill bar-na" id="barNa"></div></div>
     </div>
-    <div class="target-card card-k">
-      <div><span class="card-icon">🥝</span><span class="label">钾 K</span></div>
-      <div class="value"><span id="totalK">--</span><span class="unit">mg</span></div>
-      <div class="target-range">目标 2000–3000 mg</div>
-      <div class="bar-wrap"><div class="bar" id="barK" style="width:0%"></div></div>
-      <div class="badge-over" id="badgeK" style="display:none">⚠ 超标</div>
+    <div class="s-card">
+      <div class="s-row1">
+        <span class="s-label s-label-k">🥝 钾 K</span>
+        <span class="badge-over" id="badgeK" style="display:none">⚠ 超标</span>
+      </div>
+      <div class="s-val"><span id="totalK">--</span><span class="u">mg</span></div>
+      <div class="s-range">2000–3000 mg</div>
+      <div class="bar-wrap"><div class="bar-fill bar-k" id="barK"></div></div>
     </div>
-    <div class="target-card card-mg">
-      <div><span class="card-icon">💎</span><span class="label">镁 Mg <span id="mgSleepTag" style="font-size:0.65rem;color:#5cb85c;font-weight:600;display:none;">+ 睡前</span></span></div>
-      <div class="value"><span id="totalMg">--</span><span class="unit">mg</span></div>
-      <div class="target-range">目标 400–600 mg</div>
-      <div class="bar-wrap"><div class="bar" id="barMg" style="width:0%"></div></div>
-      <div class="badge-over" id="badgeMg" style="display:none">⚠ 超标</div>
-      <div class="mg-sleep-note">⏰ 建议睡前3-4小时完成镁的摄入，以免影响睡眠</div>
+    <div class="s-card">
+      <div class="s-row1">
+        <span class="s-label s-label-mg">💎 镁 Mg <span id="mgSleepTag" style="display:none;font-weight:400;">+睡前</span></span>
+        <span class="badge-over" id="badgeMg" style="display:none">⚠ 超标</span>
+      </div>
+      <div class="s-val"><span id="totalMg">--</span><span class="u">mg</span></div>
+      <div class="s-range">400–600 mg</div>
+      <div class="bar-wrap"><div class="bar-fill bar-mg" id="barMg"></div></div>
     </div>
-    <div class="target-card card-zn">
-      <div><span class="card-icon">🦪</span><span class="label">锌 Zn</span></div>
-      <div class="value"><span id="totalZn">--</span><span class="unit">mg</span></div>
-      <div class="target-range">目标 15–30 mg</div>
-      <div class="bar-wrap"><div class="bar" id="barZn" style="width:0%"></div></div>
-      <div class="badge-over" id="badgeZn" style="display:none">⚠ 超标</div>
+    <div class="s-card">
+      <div class="s-row1">
+        <span class="s-label s-label-zn">🦪 锌 Zn</span>
+        <span class="badge-over" id="badgeZn" style="display:none">⚠ 超标</span>
+      </div>
+      <div class="s-val"><span id="totalZn">--</span><span class="u">mg</span></div>
+      <div class="s-range">15–30 mg</div>
+      <div class="bar-wrap"><div class="bar-fill bar-zn" id="barZn"></div></div>
     </div>
   </div>
 
-  <!-- ===== Add Product Form ===== -->
-  <div class="add-form">
+  <!-- ===== Add Form ===== -->
+  <div class="form-card">
     <div class="form-row">
-      <div class="form-group" style="flex:3">
-        <label for="productSelect">选择产品</label>
-        <select id="productSelect" disabled>
-          <option value="">加载中...</option>
-        </select>
-      </div>
-      <div class="form-group" style="flex:1; min-width:0;">
-        <label for="qtyInput">数量</label>
-        <div class="qty-stepper">
-          <button class="stepper-btn" onclick="stepQty(-0.5)" type="button">−</button>
-          <input type="number" id="qtyInput" value="1" min="0.5" step="0.5" disabled>
-          <button class="stepper-btn" onclick="stepQty(0.5)" type="button">+</button>
-        </div>
+      <select id="productSelect" disabled><option value="">加载中…</option></select>
+      <div class="qty-group">
+        <button onclick="stepQty(-0.5)" type="button">−</button>
+        <input type="number" id="qtyInput" value="1" min="0.5" step="0.5" disabled>
+        <button onclick="stepQty(0.5)" type="button">+</button>
       </div>
       <button class="btn-add" id="btnAdd" onclick="addItem()" disabled>添加</button>
     </div>
   </div>
 
-  <!-- ===== Selected Items ===== -->
+  <!-- ===== Items ===== -->
   <div class="section-title">
     已添加产品
     <span class="count" id="itemCount">0 项</span>
   </div>
   <div id="itemList" class="item-list">
-    <div class="empty-state"><div class="icon">📋</div>加载数据后即可添加产品</div>
+    <div class="empty-state"><div class="icon">📋</div>还没有添加产品</div>
   </div>
-  <button class="btn-clear" id="btnClear" style="display:none">清空全部 ←</button>
+  <button class="btn-clear" id="btnClear" style="display:none">清空全部</button>
 
-  <!-- ===== Smart Suggestion Button ===== -->
-  <button class="btn-suggest" id="btnSuggest" onclick="generateSuggestions()" disabled>💡 生成补充建议</button>
-
-  <!-- ===== Suggestions Box ===== -->
-  <div class="suggest-box" id="suggestBox">
-    <h3>📋 补充建议</h3>
-    <div id="suggestContent"></div>
-  </div>
-
-  <!-- ===== Quick Tips ===== -->
-  <div class="tips">
-    <h3>📝 每日推荐参考</h3>
-    <ul>
-      <li>盐 10–15 克 → 钠约 3900–5850 mg</li>
-      <li>钾（柠檬酸钾等）：2000–3000 mg</li>
-      <li>镁（柠檬酸镁/甘氨酸镁等）：400–600 mg</li>
-      <li>锌（微量元素粉剂等）：15–30 mg</li>
-    </ul>
-  </div>
-
-  <!-- ===== Sleep Section ===== -->
-  <div class="sleep-section" id="sleepSection">
-    <div class="sleep-header">🌙 睡前补充</div>
-    <div class="sleep-row">
-      <div class="sleep-icon ca">🦴</div>
-      <div class="sleep-info">
-        <div class="sleep-label">钙 200mg</div>
-        <div class="sleep-detail">柠檬酸钙 1 克（固定量）</div>
+  <!-- ===== Suggestions ===== -->
+  <div class="suggest-card" id="suggestCard">
+    <div class="suggest-header" onclick="toggleSuggest()">
+      <h3>💡 补充建议</h3>
+      <span class="arrow" id="suggestArrow">▾</span>
+    </div>
+    <div class="suggest-body open" id="suggestBody">
+      <div id="suggestContent">
+        <div class="s-allset"><div class="icon">📋</div>添加产品后自动显示建议</div>
       </div>
-      <div class="sleep-check" id="sleepCaCheck" onclick="toggleSleepCa()">✓</div>
+    </div>
+  </div>
+
+  <!-- ===== Sleep ===== -->
+  <div class="sleep-card">
+    <div class="sl-header">🌙 睡前补充</div>
+    <div class="sleep-row">
+      <div class="sl-icon ca">🦴</div>
+      <div class="sl-info">
+        <div class="sl-label">钙 200mg</div>
+        <div class="sl-detail">柠檬酸钙 1 克</div>
+      </div>
+      <div class="sl-check" id="sleepCaCheck" onclick="toggleSleepCa()">✓</div>
     </div>
     <div class="sleep-row">
-      <div class="sleep-icon mg">💎</div>
-      <div class="sleep-info">
-        <div class="sleep-label">镁（可选 · 计入当日总量）</div>
-        <div class="sleep-mg-select">
+      <div class="sl-icon mg">💎</div>
+      <div class="sl-info">
+        <div class="sl-label">镁（可选 · 计入当日）</div>
+        <div class="sl-mg-ctrl">
           <select id="sleepMgSelect"></select>
-          <div class="sleep-mg-stepper">
+          <div class="mg-step">
             <button onclick="sleepMgStep(-0.5)">−</button>
             <input type="number" id="sleepMgQty" value="1" min="0.5" step="0.5">
             <button onclick="sleepMgStep(0.5)">+</button>
           </div>
-          <div class="sleep-check" id="sleepMgCheck" onclick="toggleSleepMg()" style="flex-shrink:0;">✓</div>
+          <div class="sl-check" id="sleepMgCheck" onclick="toggleSleepMg()" style="flex-shrink:0;">✓</div>
         </div>
-        <div class="sleep-mg-result" id="sleepMgResult">预计补充：—</div>
+        <div class="sl-mg-result" id="sleepMgResult">预计补充：—</div>
       </div>
     </div>
-    <button class="sleep-btn-mark" id="sleepBtnMark" onclick="markSleepTaken()">✓ 标记睡前已服用</button>
-    <div class="sleep-stats" id="sleepStats" style="display:none;">
+    <button class="sl-btn-mark" id="sleepBtnMark" onclick="markSleepTaken()">✓ 标记睡前已服用</button>
+    <div class="sl-stats" id="sleepStats" style="display:none;">
       <span id="sleepCaStatus">🦴 钙 ✗</span>
       <span id="sleepMgStatus">💎 镁 ✗</span>
+    </div>
+    <div class="sl-tip">⏰ 建议睡前3-4小时完成镁的摄入</div>
+  </div>
+
+  <!-- ===== Tips (collapsible) ===== -->
+  <div class="tips-card">
+    <div class="tips-header">
+      <span onclick="toggleTips()">📝 参考目标 <span class="arrow" id="tipsArrow">▾</span></span>
+    </div>
+    <div class="tips-body" id="tipsBody">
+      <ul>
+        <li>钠：盐 10–15 克 → 约 3900–5850 mg</li>
+        <li>钾：柠檬酸钾等 → 2000–3000 mg</li>
+        <li>镁：柠檬酸镁/甘氨酸镁等 → 400–600 mg</li>
+        <li>锌：微量元素粉剂等 → 15–30 mg</li>
+      </ul>
     </div>
   </div>
 
   <!-- ===== Disclaimer ===== -->
   <div class="disclaimer">
-    <strong>⚠️ 特别说明：</strong><br>
-    本品为原料制品，仅供科研使用，非正式药物和食品保健品，请规范使用！
+    <strong>⚠️ 特别说明：</strong> 本品为原料制品，仅供科研使用，非正式药物和食品保健品，请规范使用！
   </div>
 
-  <div class="footer">
-    © 2026 OrthoMolecularVita™ | 科普内容仅供参考
-  </div>
+  <div class="footer">© 2026 OrthoMolecularVita™</div>
 </div>
 
 <script>
 // ============================================================
-// DATA — loaded asynchronously from data/products.json
-//         falls back to embedded data when offline / file://
+// DATA
 // ============================================================
 let DATA = null;
 
-// Embedded fallback data — used when fetch fails (e.g. file:// protocol)
 const FALLBACK_DATA = {
   "products": [
     { "id": 1,  "name": "新四件套-套餐",              "spec": "60g/3条",    "Na": 1324, "K": 1049, "Mg": 390,  "Ca": 0,   "Zn": 15.5 },
@@ -593,73 +582,54 @@ const FALLBACK_DATA = {
 };
 
 const FALLBACK_DATA_STR = JSON.stringify(FALLBACK_DATA);
-
-// ============================================================
-// SLEEP STATE
-// ============================================================
-let sleepState = { caTaken: false, mgTaken: false, mgPid: 11, mgQty: 1 };
-let items = [];
-
-// ============================================================
-// DATA LOADING with localStorage cache
-// ============================================================
 const DATA_URL = 'data/products.json';
 const CACHE_KEY = 'nutri_products_cache';
 
+let sleepState = { caTaken: false, mgTaken: false, mgPid: 11, mgQty: 1 };
+let items = [];
+let suggestOpen = true;
+let tipsOpen = false;
+
+// ============================================================
+// DATA LOADING
+// ============================================================
 async function loadData() {
   const loading = document.getElementById('loadingScreen');
   const errorBanner = document.getElementById('errorBanner');
   errorBanner.classList.remove('show');
   loading.classList.remove('hidden');
-
-  // 1. Try localStorage cache first
   try {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       const parsed = JSON.parse(cached);
       if (parsed && parsed.products && parsed.targets) {
-        DATA = parsed;
-        loading.classList.add('hidden');
-        onDataReady();
-        return;
+        DATA = parsed; loading.classList.add('hidden'); onDataReady(); return;
       }
     }
   } catch(e) {}
-
-  // 2. Fetch from network (works on GitHub Pages / HTTP servers)
   try {
     const resp = await fetch(DATA_URL + '?t=' + Date.now());
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     DATA = await resp.json();
     try { localStorage.setItem(CACHE_KEY, JSON.stringify(DATA)); } catch(e) {}
-    loading.classList.add('hidden');
-    onDataReady();
-    return;
+    loading.classList.add('hidden'); onDataReady(); return;
   } catch (err) {
-    // 3. Fallback to embedded data (works offline / file://)
     try {
       DATA = JSON.parse(FALLBACK_DATA_STR);
       try { localStorage.setItem(CACHE_KEY, JSON.stringify(DATA)); } catch(e) {}
-      loading.classList.add('hidden');
-      onDataReady();
-      console.warn('Using embedded fallback data (fetch failed:', err.message, ')');
+      loading.classList.add('hidden'); onDataReady();
     } catch (e2) {
       loading.classList.add('hidden');
       errorBanner.classList.add('show');
-      document.getElementById('errorText').textContent =
-        '产品数据加载失败，请检查网络后重试';
+      document.getElementById('errorText').textContent = '产品数据加载失败，请检查网络后重试';
     }
   }
 }
 
 function onDataReady() {
-  // Enable UI
   document.getElementById('productSelect').disabled = false;
   document.getElementById('qtyInput').disabled = false;
   document.getElementById('btnAdd').disabled = false;
-  document.getElementById('btnSuggest').disabled = false;
-
-  // Start app
   populateSelect();
   loadState();
   renderItems();
@@ -667,19 +637,18 @@ function onDataReady() {
   populateSleepMg();
   loadSleepState();
   renderSleepState();
+  updateSuggestions();
 }
 
 // ============================================================
-// PRODUCT SELECT
+// SELECT
 // ============================================================
 function populateSelect() {
   const sel = document.getElementById('productSelect');
-  sel.innerHTML = '<option value="">— 请选择产品 —</option>';
-
+  sel.innerHTML = '<option value="">— 选择产品 —</option>';
   DATA.categories.forEach(cat => {
     const group = document.createElement('optgroup');
     group.label = cat.label;
-
     cat.ids.forEach(pid => {
       const p = DATA.products.find(x => x.id === pid);
       if (!p) return;
@@ -692,8 +661,7 @@ function populateSelect() {
       if (p.Mg > 0) parts.push('镁' + p.Mg);
       if (p.Ca > 0) parts.push('钙' + p.Ca);
       if (p.Zn > 0) parts.push('锌' + p.Zn);
-      const hint = parts.join(' ');
-      opt.textContent = icon + ' ' + p.name + ' (' + p.spec + ')' + (hint ? '  → ' + hint : '');
+      opt.textContent = icon + ' ' + p.name + ' (' + p.spec + ')' + (parts.length ? ' → ' + parts.join(' ') : '');
       group.appendChild(opt);
     });
     sel.appendChild(group);
@@ -701,16 +669,11 @@ function populateSelect() {
 }
 
 // ============================================================
-// STATE PERSISTENCE (localStorage)
+// STATE
 // ============================================================
-function saveState() {
-  try { localStorage.setItem('nutri_calc_items', JSON.stringify(items)); } catch(e) {}
-}
+function saveState() { try { localStorage.setItem('nutri_calc_items', JSON.stringify(items)); } catch(e) {} }
 function loadState() {
-  try {
-    const raw = localStorage.getItem('nutri_calc_items');
-    if (raw) items = JSON.parse(raw);
-  } catch(e) { items = []; }
+  try { const r = localStorage.getItem('nutri_calc_items'); if (r) items = JSON.parse(r); } catch(e) { items = []; }
 }
 
 // ============================================================
@@ -721,37 +684,22 @@ function addItem() {
   const qtyInput = document.getElementById('qtyInput');
   const pid = parseInt(sel.value);
   const qty = parseFloat(qtyInput.value) || 1;
-
-  if (!pid || isNaN(pid)) {
-    sel.style.borderColor = '#e74c3c';
-    setTimeout(() => sel.style.borderColor = '', 800);
-    return;
-  }
+  if (!pid || isNaN(pid)) { sel.style.borderColor = '#e74c3c'; setTimeout(() => sel.style.borderColor = '', 800); return; }
   const product = DATA.products.find(p => p.id === pid);
   if (!product) return;
   if (qty <= 0) { qtyInput.value = 1; return; }
-
   const existing = items.findIndex(i => i.productId === pid);
-  if (existing >= 0) {
-    items[existing].qty = Math.round((items[existing].qty + qty) * 10) / 10;
-  } else {
-    items.push({ productId: pid, product, qty });
-  }
-  saveState();
-  renderItems();
-  updateTotals();
-  setTimeout(() => {
-    const cards = document.querySelectorAll('.item-card');
-    if (cards.length > 0) cards[cards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, 100);
+  if (existing >= 0) { items[existing].qty = Math.round((items[existing].qty + qty) * 10) / 10; }
+  else { items.push({ productId: pid, product, qty }); }
+  saveState(); renderItems(); updateTotals(); updateSuggestions();
+  setTimeout(() => { const c = document.querySelectorAll('.item-card'); if (c.length) c[c.length-1].scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 100);
 }
-
-function removeItem(index) { items.splice(index, 1); saveState(); renderItems(); updateTotals(); }
-function clearAll() { if (items.length === 0) return; items = []; saveState(); renderItems(); updateTotals(); }
+function removeItem(i) { items.splice(i, 1); saveState(); renderItems(); updateTotals(); updateSuggestions(); }
+function clearAll() { if (!items.length) return; items = []; saveState(); renderItems(); updateTotals(); updateSuggestions(); }
 document.getElementById('btnClear').addEventListener('click', clearAll);
 
 // ============================================================
-// RENDER
+// RENDER ITEMS
 // ============================================================
 function renderItems() {
   const list = document.getElementById('itemList');
@@ -759,392 +707,187 @@ function renderItems() {
   const btnClear = document.getElementById('btnClear');
   count.textContent = items.length + ' 项';
   btnClear.style.display = items.length > 0 ? 'block' : 'none';
-  if (items.length === 0) {
-    list.innerHTML = '<div class="empty-state"><div class="icon">📋</div>还没有添加产品<br>请在上方选择并添加</div>';
-    return;
-  }
+  if (!items.length) { list.innerHTML = '<div class="empty-state"><div class="icon">📋</div>还没有添加产品</div>'; return; }
   let html = '';
   items.forEach((item, idx) => {
-    const p = item.product;
-    const qty = item.qty;
+    const p = item.product, q = item.qty;
     const parts = [];
-    if (p.Na > 0) parts.push('钠 ' + (p.Na * qty) + 'mg');
-    if (p.K  > 0) parts.push('钾 ' + (p.K * qty) + 'mg');
-    if (p.Mg > 0) parts.push('镁 ' + (p.Mg * qty) + 'mg');
-    if (p.Ca > 0) parts.push('钙 ' + (p.Ca * qty) + 'mg');
-    if (p.Zn > 0) parts.push('锌 ' + (p.Zn * qty) + 'mg');
-    const nutrientStr = parts.join(' · ');
-    const unitDisplay = specUnit(p.spec);
-    html +=
-      '<div class="item-card">' +
-        '<div class="item-info">' +
-          '<div class="item-name">' + escHtml(p.name) + '</div>' +
-          '<div class="item-spec">' + escHtml(p.spec) + (qty !== 1 ? ' × ' + qty : '') + '</div>' +
-          (nutrientStr ? '<div class="item-nutrients"><span>' + nutrientStr + '</span></div>' : '') +
-        '</div>' +
-        '<div class="item-qty">' + qty + ' ' + unitDisplay + '</div>' +
-        '<button class="btn-del" onclick="removeItem(' + idx + ')" title="删除">✕</button>' +
-      '</div>';
+    if (p.Na) parts.push('钠 ' + (p.Na*q) + 'mg');
+    if (p.K)  parts.push('钾 ' + (p.K*q) + 'mg');
+    if (p.Mg) parts.push('镁 ' + (p.Mg*q) + 'mg');
+    if (p.Ca) parts.push('钙 ' + (p.Ca*q) + 'mg');
+    if (p.Zn) parts.push('锌 ' + (p.Zn*q) + 'mg');
+    const unit = specUnit(p.spec);
+    html += '<div class="item-card"><div class="info"><div class="name">' + esc(p.name) + (q !== 1 ? ' ×' + q : '') + '</div><div class="spec">' + esc(p.spec) + '</div>' + (parts.length ? '<div class="nuts"><span>' + parts.join('</span><span>') + '</span></div>' : '') + '</div><div class="qty-badge">' + q + ' ' + unit + '</div><button class="btn-del" onclick="removeItem(' + idx + ')" title="删除">✕</button></div>';
   });
   list.innerHTML = html;
 }
 
-function escHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function specUnit(s) { if (!s) return '份'; if (s.includes('/')) return s.split('/')[1]; return s.replace(/^[\d.]+/, ''); }
 
 // ============================================================
 // TOTALS
 // ============================================================
 function updateTotals() {
   if (!DATA) return;
-  const TARGETS = DATA.targets;
-  const totals = { Na: 0, K: 0, Mg: 0, Zn: 0 };
-  items.forEach(item => {
-    const p = item.product;
-    const q = item.qty;
-    totals.Na += (p.Na || 0) * q;
-    totals.K  += (p.K  || 0) * q;
-    totals.Mg += (p.Mg || 0) * q;
-    totals.Zn += (p.Zn || 0) * q;
-  });
-  if (sleepState.mgTaken) {
-    const sp = DATA.products.find(p => p.id === sleepState.mgPid);
-    if (sp) totals.Mg += (sp.Mg || 0) * sleepState.mgQty;
-  }
-  ['Na','K','Mg','Zn'].forEach(key => { totals[key] = Math.round(totals[key]); });
+  const T = DATA.targets;
+  const totals = { Na:0, K:0, Mg:0, Zn:0 };
+  items.forEach(item => { const p = item.product, q = item.qty; totals.Na += (p.Na||0)*q; totals.K += (p.K||0)*q; totals.Mg += (p.Mg||0)*q; totals.Zn += (p.Zn||0)*q; });
+  if (sleepState.mgTaken) { const sp = DATA.products.find(p => p.id === sleepState.mgPid); if (sp) totals.Mg += (sp.Mg||0) * sleepState.mgQty; }
+  ['Na','K','Mg','Zn'].forEach(k => { totals[k] = Math.round(totals[k]); });
   document.getElementById('totalNa').textContent = totals.Na;
-  document.getElementById('totalK').textContent  = totals.K;
+  document.getElementById('totalK').textContent = totals.K;
   document.getElementById('totalMg').textContent = totals.Mg;
   document.getElementById('totalZn').textContent = totals.Zn;
   document.getElementById('mgSleepTag').style.display = sleepState.mgTaken ? 'inline' : 'none';
-  updateBar('Na', TARGETS.Na, totals.Na);
-  updateBar('K',  TARGETS.K,  totals.K);
-  updateBar('Mg', TARGETS.Mg, totals.Mg);
-  updateBar('Zn', TARGETS.Zn, totals.Zn);
+  updateBar('Na', T.Na, totals.Na); updateBar('K', T.K, totals.K);
+  updateBar('Mg', T.Mg, totals.Mg); updateBar('Zn', T.Zn, totals.Zn);
 }
-
-function updateBar(key, target, value) {
-  const bar = document.getElementById('bar' + key);
-  const badge = document.getElementById('badge' + key);
-  const pct = target.low > 0 ? Math.min((value / target.low) * 100, 100) : 0;
-  bar.style.width = pct + '%';
-  bar.classList.remove('over', 'warning');
-  badge.style.display = 'none';
-  if (value > target.high) {
-    bar.classList.add('over');
-    badge.style.display = 'block';
-  } else if (value < target.low && value >= target.low * 0.8) {
-    bar.classList.add('warning');
-  }
+function updateBar(key, t, v) {
+  const bar = document.getElementById('bar' + key), badge = document.getElementById('badge' + key);
+  const pct = t.low > 0 ? Math.min((v/t.low)*100, 100) : 0;
+  bar.style.width = pct + '%'; bar.classList.remove('over','warn'); badge.style.display = 'none';
+  if (v > t.high) { bar.classList.add('over'); badge.style.display = 'block'; }
+  else if (v < t.low && v >= t.low * 0.8) { bar.classList.add('warn'); }
 }
-
-document.getElementById('qtyInput').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') addItem();
-});
-
-function stepQty(delta) {
-  const input = document.getElementById('qtyInput');
-  let v = parseFloat(input.value) || 1;
-  v = Math.round((v + delta) * 10) / 10;
-  if (v < 0.5) v = 0.5;
-  if (v > 999) v = 999;
-  input.value = v;
-}
-document.getElementById('productSelect').addEventListener('change', function() {
-  document.getElementById('qtyInput').value = 1;
-});
+document.getElementById('qtyInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') addItem(); });
+function stepQty(delta) { const i = document.getElementById('qtyInput'); let v = parseFloat(i.value) || 1; v = Math.round((v+delta)*10)/10; if (v<0.5) v=0.5; if (v>999) v=999; i.value = v; }
+document.getElementById('productSelect').addEventListener('change', function() { document.getElementById('qtyInput').value = 1; });
 
 // ============================================================
-// HELPERS
+// SUGGESTIONS
 // ============================================================
-function specUnit(spec) {
-  if (!spec) return '份';
-  if (spec.includes('/')) return spec.split('/')[1];
-  return spec.replace(/^[\d.]+/, '');
+function toggleSuggest() {
+  const body = document.getElementById('suggestBody');
+  const arrow = document.getElementById('suggestArrow');
+  suggestOpen = !suggestOpen;
+  body.classList.toggle('open', suggestOpen);
+  arrow.classList.toggle('open', suggestOpen);
+}
+function toggleTips() {
+  const body = document.getElementById('tipsBody');
+  const arrow = document.getElementById('tipsArrow');
+  tipsOpen = !tipsOpen;
+  body.classList.toggle('open', tipsOpen);
+  arrow.classList.toggle('open', tipsOpen);
 }
 
-// ============================================================
-// SMART SUGGESTIONS
-// ============================================================
-const SUGGEST_MULTIPLIER = 1.15;
-
-function generateSuggestions() {
-  const box = document.getElementById('suggestBox');
+function updateSuggestions() {
   const content = document.getElementById('suggestContent');
-  box.classList.remove('show');
-  if (!DATA) return;
-  const TARGETS = DATA.targets;
-  const NUTRIENT_OPTIONS = DATA.nutrientOptions;
-  const NUTRIENT_ICONS = DATA.nutrientIcons;
-  const COMBOS = DATA.combos;
-
-  if (items.length === 0) {
-    box.classList.add('show');
-    content.innerHTML = '<div style="text-align:center;padding:16px;color:#999;font-size:0.85rem;">请先添加已吃的产品，再生成建议</div>';
+  if (!DATA || !items.length) {
+    content.innerHTML = '<div class="s-allset"><div class="icon">📋</div>添加产品后自动显示建议</div>';
     return;
   }
+  const T = DATA.targets, NO = DATA.nutrientOptions, NI = DATA.nutrientIcons, CO = DATA.combos;
+  const totals = { Na:0, K:0, Mg:0, Zn:0, Ca:0 };
+  items.forEach(item => { const p=item.product, q=item.qty; totals.Na+=(p.Na||0)*q; totals.K+=(p.K||0)*q; totals.Mg+=(p.Mg||0)*q; totals.Zn+=(p.Zn||0)*q; totals.Ca+=(p.Ca||0)*q; });
+  ['Na','K','Mg','Zn'].forEach(k => totals[k]=Math.round(totals[k]));
+  const sTarget = {}; ['Na','K','Mg','Zn'].forEach(k => { sTarget[k] = { low: Math.round(T[k].low*1.15), high: T[k].high }; });
+  const defs = {}; ['Na','K','Mg','Zn'].forEach(k => { defs[k] = Math.max(0, sTarget[k].low - totals[k]); });
+  const needKeys = ['Na','K','Mg','Zn'].filter(k => defs[k] > 10);
+  if (!needKeys.length) { content.innerHTML = '<div class="s-allset"><div class="icon">✅</div>各项指标均已达标！</div>'; return; }
 
-  const totals = { Na: 0, K: 0, Mg: 0, Zn: 0, Ca: 0 };
-  items.forEach(item => {
-    const p = item.product; const q = item.qty;
-    totals.Na += (p.Na || 0) * q;
-    totals.K  += (p.K  || 0) * q;
-    totals.Mg += (p.Mg || 0) * q;
-    totals.Zn += (p.Zn || 0) * q;
-    totals.Ca += (p.Ca || 0) * q;
-  });
-  ['Na','K','Mg','Zn'].forEach(k => totals[k] = Math.round(totals[k]));
+  let html = '<div class="s-summary">📊 目前' + needKeys.map(k => T[k].name + ' 差 ' + defs[k] + 'mg').join('，') + '</div>';
+  let remaining = { ...defs };
 
-  const suggestTarget = {};
-  ['Na','K','Mg','Zn'].forEach(k => {
-    suggestTarget[k] = {
-      low: Math.round(TARGETS[k].low * SUGGEST_MULTIPLIER),
-      high: TARGETS[k].high
-    };
-  });
-
-  function calcDeficits(totals, useSuggest) {
-    const tgt = useSuggest ? suggestTarget : TARGETS;
-    const def = {};
-    ['Na','K','Mg','Zn'].forEach(k => { def[k] = Math.max(0, tgt[k].low - totals[k]); });
-    return def;
-  }
-
-  const deficits = calcDeficits(totals, true);
-  const deficientKeys = ['Na','K','Mg','Zn'].filter(k => deficits[k] > 10);
-
-  if (deficientKeys.length === 0) {
-    box.classList.add('show');
-    content.innerHTML = '<div class="suggest-allset"><div class="icon">✅</div>各项指标均已达标！</div>';
-    return;
-  }
-
-  let html = '';
-  const summaryParts = deficientKeys.map(k => TARGETS[k].name + ' 差 ' + deficits[k] + 'mg');
-  html += '<div class="s-summary">📊 目前' + summaryParts.join('，') + '</div>';
-
-  function findBestCombo(deficits, totals) {
+  if (needKeys.length >= 2) {
     let best = null, bestScore = 0;
-    COMBOS.forEach(c => {
-      let maxSafe = Infinity, score = 0, covered = { Na: 0, K: 0, Mg: 0, Zn: 0 };
-      ['Na','K','Mg','Zn'].forEach(key => {
-        if (c[key] === 0) return;
-        const current = totals[key] || 0;
-        const upper = TARGETS[key].high;
-        if (deficits[key] > 0) {
-          const needed = deficits[key] / c[key];
-          const room = (upper - current) / c[key];
-          const safe = Math.min(needed, room);
-          if (safe < maxSafe) maxSafe = safe;
-          covered[key] = Math.round(Math.min(deficits[key], safe * c[key]));
-          score += covered[key];
-        } else {
-          const room = (upper - current) / c[key];
-          if (room < maxSafe) maxSafe = room;
-        }
+    CO.forEach(c => {
+      let maxSafe = Infinity, score = 0, covered = { Na:0, K:0, Mg:0, Zn:0 };
+      ['Na','K','Mg','Zn'].forEach(k => {
+        if (c[k] === 0) return;
+        const cur = totals[k]||0, upper = T[k].high;
+        if (defs[k] > 0) { const needed = defs[k]/c[k], room = (upper-cur)/c[k], safe = Math.min(needed,room); if (safe<maxSafe) maxSafe=safe; covered[k]=Math.round(Math.min(defs[k],safe*c[k])); score+=covered[k]; }
+        else { const room = (upper-cur)/c[k]; if (room<maxSafe) maxSafe=room; }
       });
       if (maxSafe < 0.5) return;
-      const servings = Math.floor(maxSafe * 2) / 2;
+      const servings = Math.floor(maxSafe*2)/2;
       if (servings < 0.5) return;
-      if (score > bestScore) { bestScore = score; best = { combo: c, servings, covered }; }
+      if (score > bestScore) { bestScore=score; best={combo:c, servings, covered}; }
     });
-    return best;
-  }
-
-  let remaining = { ...deficits };
-
-  if (deficientKeys.length >= 2) {
-    const combo = findBestCombo(remaining, totals);
-    if (combo) {
-      const c = combo.combo;
-      const lines = []; let hasAny = false; const projText = [];
-      ['Na','K','Mg','Zn'].forEach(key => {
-        const cvd = combo.covered[key] || 0;
-        if (cvd > 0) { lines.push(TARGETS[key].name + ' +' + cvd + 'mg'); remaining[key] = Math.max(0, remaining[key] - cvd); hasAny = true; }
-        if (c[key] > 0) {
-          const after = Math.round(totals[key] + c[key] * combo.servings);
-          const icon = after >= TARGETS[key].low ? (after <= TARGETS[key].high ? '✅' : '⚠️超') : '⬆️';
-          projText.push(TARGETS[key].name + icon + after + 'mg');
-        }
+    if (best) {
+      const c = best.combo;
+      const lines = []; let hasAny = false; const proj = [];
+      ['Na','K','Mg','Zn'].forEach(k => {
+        const cvd = best.covered[k]||0;
+        if (cvd > 0) { lines.push(T[k].name+'+'+cvd+'mg'); remaining[k]=Math.max(0,remaining[k]-cvd); hasAny=true; }
+        if (c[k] > 0) { const after=Math.round(totals[k]+c[k]*best.servings); const icon=after>=T[k].low?(after<=T[k].high?'✅':'⚠️超'):'⬆️'; proj.push(T[k].name+icon+after+'mg'); }
       });
       if (hasAny) {
         const p = DATA.products.find(p => p.id === c.pid);
-        html +=
-          '<div style="font-size:0.8rem;font-weight:600;color:#764ba2;margin:0 0 8px 0;">📦 复合推荐（一次补多种）</div>' +
-          '<div class="suggest-item" style="background:#faf8ff;border-radius:10px;padding:12px;margin-bottom:10px;border:1px solid #e8e0ff;">' +
-            '<div style="flex:1">' +
-              '<div style="font-size:0.85rem;font-weight:600;color:#333;">' + c.icon + ' ' + escHtml(p.name) + ' × ' + combo.servings + specUnit(p.spec) + '</div>' +
-              '<div style="font-size:0.75rem;color:#666;margin-top:3px;">可补充：' + lines.join(' · ') + '</div>' +
-              '<div style="font-size:0.68rem;color:#999;margin-top:2px;">添加后：' + projText.join(' / ') + '</div>' +
-            '</div>' +
-            '<button class="s-btn-add" onclick="quickAdd(' + p.id + ',' + combo.servings + ')">添加</button>' +
-          '</div>';
+        html += '<div class="s-combo-box"><div class="sc-title">📦 复合推荐（一次补多种）</div><div class="sc-row"><div class="sc-info"><div class="sc-name">' + c.icon + ' ' + esc(p.name) + ' × ' + best.servings + specUnit(p.spec) + '</div><div class="sc-detail">可补充：' + lines.join(' · ') + '</div><div class="sc-proj">添加后：' + proj.join(' / ') + '</div></div><button class="sc-btn" onclick="quickAdd(' + p.id + ',' + best.servings + ')">添加</button></div></div>';
       }
     }
   }
 
-  deficientKeys.forEach(key => {
-    const options = NUTRIENT_OPTIONS[key];
-    if (!options || options.length === 0) return;
-    const deficit = deficits[key];
-    if (deficit < 10) return;
-    html +=
-      '<div style="font-size:0.8rem;font-weight:600;color:#333;margin:12px 0 6px 0;">' +
-        NUTRIENT_ICONS[key] + ' 补' + TARGETS[key].name + '（还差 ' + deficit + 'mg）' +
-      '</div>';
-    options.forEach(opt => {
+  needKeys.forEach(key => {
+    const opts = NO[key];
+    if (!opts || !opts.length) return;
+    if (defs[key] < 10) return;
+    html += '<div style="font-size:0.75rem;font-weight:600;color:#444;margin:8px 0 4px;">' + NI[key] + ' 补' + T[key].name + '（还差 ' + defs[key] + 'mg）</div>';
+    opts.forEach(opt => {
       const product = DATA.products.find(p => p.id === opt.pid);
       if (!product) return;
-      const qty = Math.ceil(deficit / opt.content * 2) / 2;
+      const qty = Math.ceil(defs[key] / opt.content * 2) / 2;
       const covered = Math.round(qty * opt.content);
-      const after = Math.round((totals[key] || 0) + covered);
-      const status = after >= TARGETS[key].low ? (after <= TARGETS[key].high ? '✅' : '⚠️超') : '⬆️';
-      const unitDisplay = opt.spec.includes('/') ? opt.spec.split('/')[1] : '克';
-      html +=
-        '<div class="suggest-item">' +
-          '<div class="s-icon ' + key.toLowerCase() + '">' + opt.icon + '</div>' +
-          '<div class="s-info">' +
-            '<div class="s-action">' + escHtml(opt.label) + ' ' + qty + unitDisplay + '</div>' +
-            '<div class="s-detail">可补充 <span>+' + covered + 'mg</span>' +
-              (opt.note ? ' · ' + opt.note : '') +
-              '<br><span style="font-size:0.68rem;color:#999;">添加后：' + TARGETS[key].name + status + after + 'mg</span>' +
-            '</div>' +
-          '</div>' +
-          '<button class="s-btn-add" onclick="quickAdd(' + opt.pid + ',' + qty + ')">添加</button>' +
-        '</div>';
+      const after = Math.round((totals[key]||0) + covered);
+      const status = after >= T[key].low ? (after <= T[key].high ? '✅' : '⚠️超') : '⬆️';
+      const ud = opt.spec.includes('/') ? opt.spec.split('/')[1] : '克';
+      html += '<div class="s-item"><div class="si-icon ' + key.toLowerCase() + '">' + opt.icon + '</div><div class="si-info"><div class="si-action">' + esc(opt.label) + ' ' + qty + ud + '</div><div class="si-detail">可补充 <span>+' + covered + 'mg</span>' + (opt.note ? ' · ' + opt.note : '') + '<br><span style="font-size:0.62rem;color:#aaa;">添加后：' + T[key].name + status + after + 'mg</span></div></div><button class="si-btn" onclick="quickAdd(' + opt.pid + ',' + qty + ')">添加</button></div>';
     });
   });
-
   content.innerHTML = html;
-  box.classList.add('show');
-  setTimeout(() => { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 100);
 }
 
 function quickAdd(pid, qty) {
   const product = DATA.products.find(p => p.id === pid);
   if (!product) return;
   items.push({ productId: pid, product, qty });
-  saveState();
-  renderItems();
-  updateTotals();
-  generateSuggestions();
+  saveState(); renderItems(); updateTotals(); updateSuggestions();
 }
 
 // ============================================================
-// SLEEP SECTION
+// SLEEP
 // ============================================================
-function sleepMgProduct() {
-  return DATA ? (DATA.products.find(p => p.id === sleepState.mgPid) || DATA.products[10]) : null;
-}
+function sleepMgProduct() { return DATA ? (DATA.products.find(p=>p.id===sleepState.mgPid) || DATA.products[10]) : null; }
 function updateSleepMgResult() {
-  const p = sleepMgProduct();
-  if (!p) return;
-  const qty = sleepState.mgQty;
-  const mgAdded = Math.round((p.Mg || 0) * qty);
-  const unit = specUnit(p.spec);
-  document.getElementById('sleepMgResult').textContent =
-    '预计补充：' + mgAdded + 'mg Mg（' + p.name + ' ' + qty + unit + '）';
+  const p = sleepMgProduct(); if (!p) return;
+  const mg = Math.round((p.Mg||0) * sleepState.mgQty);
+  document.getElementById('sleepMgResult').textContent = '预计补充：' + mg + 'mg Mg（' + p.name + ' ' + sleepState.mgQty + specUnit(p.spec) + '）';
 }
-function sleepMgStep(delta) {
-  let v = parseFloat(sleepState.mgQty) || 1;
-  v = Math.round((v + delta) * 10) / 10;
-  if (v < 0.5) v = 0.5;
-  if (v > 10) v = 10;
-  sleepState.mgQty = v;
-  document.getElementById('sleepMgQty').value = v;
-  updateSleepMgResult();
-  saveSleepState();
-}
-function toggleSleepCa() {
-  sleepState.caTaken = !sleepState.caTaken;
-  document.getElementById('sleepCaCheck').classList.toggle('done', sleepState.caTaken);
-  updateSleepStats();
-  saveSleepState();
-}
-function toggleSleepMg() {
-  sleepState.mgTaken = !sleepState.mgTaken;
-  document.getElementById('sleepMgCheck').classList.toggle('done', sleepState.mgTaken);
-  updateSleepMgResult();
-  updateTotals();
-  updateSleepStats();
-  saveSleepState();
-}
+function sleepMgStep(d) { let v = parseFloat(sleepState.mgQty)||1; v=Math.round((v+d)*10)/10; if(v<0.5)v=0.5; if(v>10)v=10; sleepState.mgQty=v; document.getElementById('sleepMgQty').value=v; updateSleepMgResult(); saveSleepState(); }
+function toggleSleepCa() { sleepState.caTaken=!sleepState.caTaken; document.getElementById('sleepCaCheck').classList.toggle('done',sleepState.caTaken); updateSleepStats(); saveSleepState(); }
+function toggleSleepMg() { sleepState.mgTaken=!sleepState.mgTaken; document.getElementById('sleepMgCheck').classList.toggle('done',sleepState.mgTaken); updateSleepMgResult(); updateTotals(); updateSleepStats(); saveSleepState(); }
 function markSleepTaken() {
-  if (!sleepState.caTaken) { sleepState.caTaken = true; document.getElementById('sleepCaCheck').classList.add('done'); }
-  if (!sleepState.mgTaken) { sleepState.mgTaken = true; document.getElementById('sleepMgCheck').classList.add('done'); }
-  updateSleepStats();
-  updateTotals();
-  saveSleepState();
-  const btn = document.getElementById('sleepBtnMark');
-  btn.textContent = '✅ 已服用';
-  btn.classList.add('done');
+  if (!sleepState.caTaken) { sleepState.caTaken=true; document.getElementById('sleepCaCheck').classList.add('done'); }
+  if (!sleepState.mgTaken) { sleepState.mgTaken=true; document.getElementById('sleepMgCheck').classList.add('done'); }
+  updateSleepStats(); updateTotals(); saveSleepState();
+  const btn = document.getElementById('sleepBtnMark'); btn.textContent = '✅ 已服用'; btn.classList.add('done');
   setTimeout(() => { btn.textContent = '✓ 标记睡前已服用'; btn.classList.remove('done'); }, 2000);
 }
-function updateSleepStats() {
-  const stats = document.getElementById('sleepStats');
-  stats.style.display = 'block';
-  document.getElementById('sleepCaStatus').textContent = '🦴 钙 ' + (sleepState.caTaken ? '✓ 200mg' : '✗');
-  document.getElementById('sleepMgStatus').textContent = '💎 镁 ' + (sleepState.mgTaken ? '✓ 已计入当日' : '✗');
-}
+function updateSleepStats() { const s=document.getElementById('sleepStats'); s.style.display='block'; document.getElementById('sleepCaStatus').textContent='🦴 钙 '+(sleepState.caTaken?'✓ 200mg':'✗'); document.getElementById('sleepMgStatus').textContent='💎 镁 '+(sleepState.mgTaken?'✓ 已计入当日':'✗'); }
 function populateSleepMg() {
   const sel = document.getElementById('sleepMgSelect');
-  const mgOpts = [
-    { pid: 13, label: '甘氨酸镁（助眠）' },
-    { pid: 11, label: '柠檬酸镁' },
-    { pid: 12, label: '苏糖酸镁' },
-    { pid: 14, label: '五重镁代管胶囊' },
-    { pid: 19, label: '甜梦静息(原料粉)' },
-    { pid: 22, label: '甜梦静息代灌胶囊' },
-  ];
-  sel.innerHTML = '';
-  mgOpts.forEach(o => {
-    const opt = document.createElement('option');
-    opt.value = o.pid;
-    opt.textContent = o.label;
-    sel.appendChild(opt);
-  });
+  const opts = [{pid:13,label:'甘氨酸镁（助眠）'},{pid:11,label:'柠檬酸镁'},{pid:12,label:'苏糖酸镁'},{pid:14,label:'五重镁代管胶囊'},{pid:19,label:'甜梦静息(原料粉)'},{pid:22,label:'甜梦静息代灌胶囊'}];
+  sel.innerHTML = ''; opts.forEach(o => { const opt=document.createElement('option'); opt.value=o.pid; opt.textContent=o.label; sel.appendChild(opt); });
   sel.value = sleepState.mgPid;
-  sel.addEventListener('change', function() {
-    sleepState.mgPid = parseInt(this.value);
-    updateSleepMgResult();
-    saveSleepState();
-  });
-  document.getElementById('sleepMgQty').addEventListener('change', function() {
-    const v = parseFloat(this.value) || 1;
-    sleepState.mgQty = Math.max(0.5, Math.min(10, v));
-    this.value = sleepState.mgQty;
-    updateSleepMgResult();
-    saveSleepState();
-  });
+  sel.addEventListener('change', function() { sleepState.mgPid=parseInt(this.value); updateSleepMgResult(); saveSleepState(); });
+  document.getElementById('sleepMgQty').addEventListener('change', function() { const v=parseFloat(this.value)||1; sleepState.mgQty=Math.max(0.5,Math.min(10,v)); this.value=sleepState.mgQty; updateSleepMgResult(); saveSleepState(); });
 }
 function saveSleepState() { try { localStorage.setItem('nutri_sleep', JSON.stringify(sleepState)); } catch(e) {} }
-function loadSleepState() {
-  try {
-    const raw = localStorage.getItem('nutri_sleep');
-    if (raw) { const parsed = JSON.parse(raw); sleepState = { ...sleepState, ...parsed }; }
-  } catch(e) {}
-}
+function loadSleepState() { try { const r = localStorage.getItem('nutri_sleep'); if (r) { const p=JSON.parse(r); sleepState={...sleepState,...p}; } } catch(e) {} }
 function renderSleepState() {
-  document.getElementById('sleepCaCheck').classList.toggle('done', sleepState.caTaken);
-  document.getElementById('sleepMgCheck').classList.toggle('done', sleepState.mgTaken);
-  document.getElementById('sleepMgQty').value = sleepState.mgQty;
-  const sel = document.getElementById('sleepMgSelect');
-  if (sel) sel.value = sleepState.mgPid;
-  updateSleepMgResult();
-  updateSleepStats();
-  if (sleepState.caTaken && sleepState.mgTaken) {
-    const btn = document.getElementById('sleepBtnMark');
-    btn.textContent = '✅ 已服用';
-    btn.classList.add('done');
-    setTimeout(() => { btn.textContent = '✓ 标记睡前已服用'; btn.classList.remove('done'); }, 2000);
-  }
+  document.getElementById('sleepCaCheck').classList.toggle('done',sleepState.caTaken);
+  document.getElementById('sleepMgCheck').classList.toggle('done',sleepState.mgTaken);
+  document.getElementById('sleepMgQty').value=sleepState.mgQty;
+  const sel=document.getElementById('sleepMgSelect'); if (sel) sel.value=sleepState.mgPid;
+  updateSleepMgResult(); updateSleepStats();
+  if (sleepState.caTaken && sleepState.mgTaken) { const btn=document.getElementById('sleepBtnMark'); btn.textContent='✅ 已服用'; btn.classList.add('done'); setTimeout(()=>{btn.textContent='✓ 标记睡前已服用';btn.classList.remove('done');},2000); }
 }
 
 // ============================================================
-// START — load data asynchronously
+// START
 // ============================================================
 loadData();
 </script>
