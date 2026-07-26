@@ -9,3 +9,6 @@ Thumbs.db
 
 # Claude
 .claude/
+
+# Static page (hosted separately)
+index.html
