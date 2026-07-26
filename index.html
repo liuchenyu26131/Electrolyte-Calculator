@@ -31,8 +31,14 @@
   /* ===== Container ===== */
   .app-wrap { max-width: 480px; margin: 0 auto; padding: 0 12px; }
 
-  /* ===== Header ===== */
+  /* ===== Sticky Dashboard ===== */
+  .dashboard-sticky {
+    position: sticky; top: 0; z-index: 90;
+    background: #f6f8fa; padding-top: 8px;
+  }
   .header {
+    padding: 16px 0 12px; text-align: center;
+  }
     padding: 24px 0 20px; text-align: center;
   }
   .header h1 {
@@ -113,7 +119,6 @@
     background: #fff; border-radius: 14px; padding: 12px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
     margin-bottom: 12px;
-    position: sticky; top: 60px; z-index: 90;
   }
   .form-row { display: flex; gap: 8px; align-items: center; }
   .form-row select {
@@ -375,6 +380,9 @@
 
 <div class="app-wrap">
 
+  <!-- ===== Sticky Dashboard ===== -->
+  <div class="dashboard-sticky">
+
   <div class="header">
     <h1>钠<span class="dot"> · </span>钾<span class="dot"> · </span>镁<span class="dot"> · </span>锌</h1>
     <div class="sub">每日摄入计算器</div>
@@ -425,6 +433,9 @@
       <button class="btn-add" id="btnAdd" onclick="addItem()" disabled>添加</button>
     </div>
   </div>
+
+  </div>
+  <!-- ===== End Sticky Dashboard ===== -->
 
   <!-- Items -->
   <div class="section-title">
