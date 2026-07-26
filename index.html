@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>钠、钾、镁、锌摄入计算器</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 17px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f5f7fa; color: #1a1a2e; line-height: 1.6; padding-bottom: 40px;
+  }
+  .header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #fff; padding: 24px 16px 20px; text-align: center;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+  .header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: 1px; }
+  .header p { font-size: 0.85rem; opacity: 0.75; margin-top: 4px; }
+  .container { max-width: 500px; margin: 0 auto; padding: 12px 12px; }
+
+  /* ===== Loading State ===== */
+  .loading-screen {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: #f5f7fa; z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: opacity 0.4s ease;
+  }
+  .loading-screen.hidden { opacity: 0; pointer-events: none; }
+  .loading-spinner {
+    width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top-color: #1a1a2e;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { margin-top: 16px; font-size: 0.9rem; color: #888; }
+
+  /* ===== Error Banner ===== */
+  .error-banner {
+    display: none; background: #fff0f0; border: 1px solid #ffc0c0;
+    border-radius: 10px; padding: 14px 16px; margin-bottom: 14px;
+    font-size: 0.78rem; color: #c0392b; line-height: 1.6;
+  }
+  .error-banner.show { display: block; }
+  .error-banner .retry-btn {
+    display: inline-block; margin-top: 8px; padding: 6px 14px;
+    border: 1px solid #c0392b; border-radius: 6px;
+    background: transparent; color: #c0392b; font-size: 0.78rem;
+    cursor: pointer; font-weight: 600;
+  }
+  .error-banner .retry-btn:active { background: #fff0f0; }
+
+  .targets-summary {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;
+  }
+  .target-card {
+    background: #fff; border-radius: 14px; padding: 16px 14px 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06); position: relative; overflow: hidden;
+    border-top: 4px solid transparent;
+  }
+  .target-card .card-icon {
+    font-size: 1.5rem; line-height: 1; margin-bottom: 2px;
+    display: inline-block; vertical-align: middle; margin-right: 4px;
+  }
+  .target-card .label {
+    font-size: 1.1rem; font-weight: 700; letter-spacing: 0.5px;
+    display: inline-block; vertical-align: middle;
+  }
+  .target-card .value {
+    font-size: 1.7rem; font-weight: 800; margin: 4px 0 0; letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+  .target-card .value .unit { font-size: 0.8rem; font-weight: 500; opacity: 0.6; margin-left: 2px; }
+  .target-card .target-range {
+    font-size: 0.7rem; opacity: 0.55; margin-top: 1px; font-weight: 400;
+  }
+  .target-card .bar-wrap {
+    height: 6px; background: #eef0f5; border-radius: 4px; margin-top: 10px; overflow: hidden;
+  }
+  .target-card .bar {
+    height: 100%; border-radius: 4px; transition: width 0.5s cubic-bezier(0.25,0.46,0.45,0.94);
+    width: 0%;
+  }
+  .target-card .bar.over { background: #ff6b6b !important; }
+  .target-card .bar.warning { background: #feca57 !important; }
+  .target-card .badge-over {
+    position: absolute; top: 10px; right: 10px;
+    background: #ff6b6b; color: #fff;
+    font-size: 0.6rem; padding: 2px 8px; border-radius: 5px; font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .target-card .badge-ok {
+    position: absolute; top: 10px; right: 10px;
+    background: #5cb85c; color: #fff;
+    font-size: 0.6rem; padding: 2px 8px; border-radius: 5px; font-weight: 700;
+  }
+  .card-na { border-top-color: #4a90d9; }
+  .card-k  { border-top-color: #e8a838; }
+  .card-mg { border-top-color: #5cb85c; }
+  .card-zn { border-top-color: #9b59b6; }
+  .card-na .label { color: #4a90d9; }
+  .card-k .label  { color: #e8a838; }
+  .card-mg .label { color: #5cb85c; }
+  .card-zn .label { color: #9b59b6; }
+  .card-na .bar { background: linear-gradient(90deg, #4a90d9, #6fb1fc); }
+  .card-k .bar  { background: linear-gradient(90deg, #e8a838, #f5c452); }
+  .card-mg .bar { background: linear-gradient(90deg, #5cb85c, #7ed37e); }
+  .card-zn .bar { background: linear-gradient(90deg, #9b59b6, #bb77dd); }
+  .mg-sleep-note {
+    font-size: 0.62rem; color: #e67e22; margin-top: 8px; line-height: 1.4;
+    padding: 5px 8px; background: #fef9e7; border-radius: 6px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .section-title {
+    font-size: 0.95rem; font-weight: 600; color: #333;
+    margin: 16px 0 10px; display: flex; align-items: center; gap: 8px;
+  }
+  .section-title .count {
+    background: #e8ecf1; font-size: 0.75rem; padding: 1px 8px; border-radius: 10px;
+    font-weight: 500; color: #666;
+  }
+  .add-form {
+    background: #fff; border-radius: 12px; padding: 16px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06); margin-bottom: 14px;
+  }
+  .form-row { display: flex; gap: 10px; align-items: flex-end; }
+  .form-group { flex: 1; }
+  .form-group label {
+    display: block; font-size: 0.78rem; color: #888; font-weight: 500; margin-bottom: 4px;
+  }
+  .form-group select, .form-group input {
+    width: 100%; height: 44px; border: 1px solid #ddd; border-radius: 8px;
+    padding: 0 10px; font-size: 0.9rem; background: #fafbfc; color: #333;
+    appearance: auto; -webkit-appearance: auto;
+  }
+  .qty-stepper {
+    display: flex; align-items: center; gap: 4px;
+  }
+  .qty-stepper input {
+    width: 60px; height: 44px; text-align: center; flex-shrink: 0;
+    border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; font-weight: 600;
+    background: #fafbfc; color: #333; -moz-appearance: textfield;
+  }
+  .qty-stepper input::-webkit-outer-spin-button,
+  .qty-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .stepper-btn {
+    width: 40px; height: 40px; border: 1px solid #ddd; border-radius: 8px;
+    background: #fff; color: #1a1a2e; font-size: 1.2rem; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; user-select: none; touch-action: manipulation;
+  }
+  .stepper-btn:active { background: #eef0f5; transform: scale(0.94); }
+  .form-group select:focus, .form-group input:focus {
+    outline: none; border-color: #4a90d9; box-shadow: 0 0 0 3px rgba(74,144,217,0.12);
+  }
+  .btn-add {
+    height: 44px; min-width: 64px; border: none; border-radius: 8px;
+    background: #1a1a2e; color: #fff; font-size: 0.9rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .btn-add:active { transform: scale(0.96); background: #333; }
+  .item-list { margin-bottom: 14px; }
+  .item-card {
+    background: #fff; border-radius: 10px; padding: 12px 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05); margin-bottom: 8px;
+    display: flex; align-items: center; gap: 10px;
+    animation: slideIn 0.25s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .item-card .item-info { flex: 1; min-width: 0; }
+  .item-card .item-name { font-size: 0.9rem; font-weight: 600; color: #333; }
+  .item-card .item-spec {
+    font-size: 0.76rem; color: #999; margin-top: 1px;
+  }
+  .item-card .item-nutrients {
+    display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap;
+  }
+  .item-card .item-nutrients span {
+    font-size: 0.72rem; color: #666; background: #f0f2f6; padding: 1px 6px; border-radius: 4px;
+  }
+  .item-card .item-qty {
+    font-size: 0.85rem; font-weight: 600; color: #1a1a2e;
+    background: #eef0f5; padding: 4px 10px; border-radius: 6px; text-align: center;
+    min-width: 36px;
+  }
+  .item-card .btn-del {
+    width: 34px; height: 34px; border: none; border-radius: 50%;
+    background: #fee; color: #e74c3c; font-size: 1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0;
+  }
+  .item-card .btn-del:active { background: #fdd; transform: scale(0.9); }
+  .empty-state {
+    text-align: center; padding: 30px 16px; color: #bbb; font-size: 0.85rem;
+  }
+  .empty-state .icon { font-size: 2.5rem; margin-bottom: 8px; opacity: 0.4; }
+  .tips {
+    background: #fff; border-radius: 12px; padding: 14px 16px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06); margin-bottom: 14px;
+  }
+  .tips h3 { font-size: 0.82rem; color: #333; margin-bottom: 8px; }
+  .tips ul { list-style: none; padding: 0; }
+  .tips li {
+    font-size: 0.75rem; color: #666; padding: 3px 0; line-height: 1.5;
+  }
+  .tips li::before { content: "\1F4A1 "; }
+  .btn-clear {
+    display: block; width: 100%; padding: 12px;
+    border: none; border-radius: 10px;
+    background: #fff; color: #e74c3c; font-size: 0.85rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; margin-bottom: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    letter-spacing: 0.5px;
+  }
+  .btn-clear:active { background: #fff5f5; transform: scale(0.98); }
+  .btn-suggest {
+    display: block; width: 100%; padding: 13px; border: none; border-radius: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff; font-size: 0.9rem; font-weight: 600; letter-spacing: 1px;
+    cursor: pointer; transition: all 0.2s; margin-bottom: 14px;
+    box-shadow: 0 2px 8px rgba(102,126,234,0.3);
+  }
+  .btn-suggest:active { transform: scale(0.97); opacity: 0.9; }
+  .btn-suggest:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .suggest-box {
+    background: #fff; border-radius: 12px; padding: 16px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06); margin-bottom: 14px;
+    display: none;
+  }
+  .suggest-box.show { display: block; }
+  .suggest-box h3 {
+    font-size: 0.85rem; font-weight: 700; color: #333; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .suggest-box .s-summary {
+    font-size: 0.78rem; color: #666; line-height: 1.6; margin-bottom: 12px;
+    padding: 10px 12px; background: #f8f9ff; border-radius: 8px; border-left: 3px solid #667eea;
+  }
+  .suggest-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid #f0f0f0;
+  }
+  .suggest-item:last-child { border-bottom: none; }
+  .suggest-item .s-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; flex-shrink: 0;
+  }
+  .suggest-item .s-icon.na { background: #e8f0fe; }
+  .suggest-item .s-icon.k  { background: #fef6e8; }
+  .suggest-item .s-icon.mg { background: #e8f8e8; }
+  .suggest-item .s-icon.ca { background: #f0e8f8; }
+  .suggest-item .s-icon.zn { background: #f3e8f8; }
+  .suggest-item .s-info { flex: 1; }
+  .suggest-item .s-info .s-action { font-size: 0.8rem; font-weight: 600; color: #333; }
+  .suggest-item .s-info .s-detail { font-size: 0.72rem; color: #888; margin-top: 1px; }
+  .suggest-item .s-info .s-detail span { color: #667eea; font-weight: 600; }
+  .suggest-item .s-btn-add {
+    padding: 6px 12px; border: 1px solid #667eea; border-radius: 6px;
+    background: transparent; color: #667eea; font-size: 0.72rem; font-weight: 600;
+    cursor: pointer; white-space: nowrap; transition: all 0.15s;
+  }
+  .suggest-item .s-btn-add:active { background: #667eea; color: #fff; }
+  .suggest-allset {
+    text-align: center; padding: 20px; color: #5cb85c; font-size: 0.9rem; font-weight: 600;
+  }
+  .suggest-allset .icon { font-size: 2rem; margin-bottom: 6px; }
+  .sleep-section {
+    background: linear-gradient(135deg, #1a1a2e 0%, #2d2440 100%);
+    color: #fff; border-radius: 14px; padding: 16px; margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .sleep-section .sleep-header {
+    font-size: 1rem; font-weight: 700; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sleep-row {
+    display: flex; align-items: center; gap: 10px; padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .sleep-row:last-child { border-bottom: none; }
+  .sleep-row .sleep-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.9rem; flex-shrink: 0;
+  }
+  .sleep-row .sleep-icon.ca { background: rgba(142,108,199,0.25); }
+  .sleep-row .sleep-icon.mg { background: rgba(92,184,92,0.25); }
+  .sleep-row .sleep-info { flex: 1; min-width: 0; }
+  .sleep-row .sleep-info .sleep-label { font-size: 0.85rem; font-weight: 600; }
+  .sleep-row .sleep-info .sleep-detail { font-size: 0.75rem; opacity: 0.6; margin-top: 1px; }
+  .sleep-check {
+    width: 26px; height: 26px; border-radius: 50%; border: 2px solid #666;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; cursor: pointer; flex-shrink: 0;
+    transition: all 0.2s; background: transparent; color: transparent;
+  }
+  .sleep-check.done { border-color: #5cb85c; background: #5cb85c; color: #fff; }
+  .sleep-mg-select {
+    display: flex; align-items: center; gap: 8px; margin-top: 4px;
+  }
+  .sleep-mg-select select {
+    height: 32px; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px;
+    background: rgba(255,255,255,0.08); color: #fff; font-size: 0.75rem;
+    padding: 0 6px; flex: 1; min-width: 0;
+  }
+  .sleep-mg-select select option { background: #2d2440; color: #fff; }
+  .sleep-mg-stepper {
+    display: flex; align-items: center; gap: 3px;
+  }
+  .sleep-mg-stepper button {
+    width: 28px; height: 28px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.08); color: #fff; font-size: 0.9rem;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .sleep-mg-stepper button:active { background: rgba(255,255,255,0.2); }
+  .sleep-mg-stepper input {
+    width: 40px; height: 28px; text-align: center; border: none; border-radius: 4px;
+    background: rgba(255,255,255,0.1); color: #fff; font-size: 0.8rem; font-weight: 600;
+    -moz-appearance: textfield;
+  }
+  .sleep-mg-stepper input::-webkit-outer-spin-button,
+  .sleep-mg-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .sleep-mg-result {
+    font-size: 0.7rem; opacity: 0.7; margin-top: 3px;
+  }
+  .sleep-btn-mark {
+    width: 100%; padding: 10px; border: none; border-radius: 8px;
+    background: rgba(255,255,255,0.12); color: #fff; font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; margin-top: 10px; transition: all 0.2s;
+  }
+  .sleep-btn-mark:active { background: rgba(255,255,255,0.2); }
+  .sleep-btn-mark.done { background: rgba(92,184,92,0.3); color: #5cb85c; }
+  .sleep-stats {
+    display: flex; gap: 12px; margin-top: 10px;
+    font-size: 0.7rem; opacity: 0.6;
+  }
+  .sleep-stats span { display: flex; align-items: center; gap: 4px; }
+  .footer {
+    text-align: center; padding: 20px 16px 10px;
+    font-size: 0.7rem; color: #bbb;
+  }
+  .disclaimer {
+    background: #fff8e8; border: 1px solid #f0dca0; border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 14px;
+    font-size: 0.72rem; color: #8a6d2b; line-height: 1.7;
+  }
+  .disclaimer strong { font-weight: 700; }
+  @media (max-width: 380px) {
+    .form-row { flex-wrap: wrap; }
+    .form-group select { width: 100%; }
+    .targets-summary { gap: 8px; }
+    .target-card { padding: 14px 12px 12px; }
+    .target-card .value { font-size: 1.4rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Loading Screen ===== -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">正在加载产品数据...</div>
+</div>
+
+<div class="header">
+  <h1>📊 钠 | 钾 | 镁 | 锌 摄入计算器</h1>
+  <p>选择产品 · 计算每日钠钾镁锌总量</p>
+</div>
+
+<div class="container">
+
+  <!-- ===== Error Banner ===== -->
+  <div class="error-banner" id="errorBanner">
+    <span id="errorText">数据加载失败，请检查网络后重试</span>
+    <br><button class="retry-btn" onclick="loadData()">重新加载</button>
+  </div>
+
+  <!-- ===== Daily Targets Summary ===== -->
+  <div class="targets-summary" id="summaryCards">
+    <div class="target-card card-na">
+      <div><span class="card-icon">🧂</span><span class="label">钠 Na</span></div>
+      <div class="value"><span id="totalNa">--</span><span class="unit">mg</span></div>
+      <div class="target-range">目标 3900–5850 mg</div>
+      <div class="bar-wrap"><div class="bar" id="barNa" style="width:0%"></div></div>
+      <div class="badge-over" id="badgeNa" style="display:none">⚠ 超标</div>
+    </div>
+    <div class="target-card card-k">
+      <div><span class="card-icon">🥝</span><span class="label">钾 K</span></div>
+      <div class="value"><span id="totalK">--</span><span class="unit">mg</span></div>
+      <div class="target-range">目标 2000–3000 mg</div>
+      <div class="bar-wrap"><div class="bar" id="barK" style="width:0%"></div></div>
+      <div class="badge-over" id="badgeK" style="display:none">⚠ 超标</div>
+    </div>
+    <div class="target-card card-mg">
+      <div><span class="card-icon">💎</span><span class="label">镁 Mg <span id="mgSleepTag" style="font-size:0.65rem;color:#5cb85c;font-weight:600;display:none;">+ 睡前</span></span></div>
+      <div class="value"><span id="totalMg">--</span><span class="unit">mg</span></div>
+      <div class="target-range">目标 400–600 mg</div>
+      <div class="bar-wrap"><div class="bar" id="barMg" style="width:0%"></div></div>
+      <div class="badge-over" id="badgeMg" style="display:none">⚠ 超标</div>
+      <div class="mg-sleep-note">⏰ 建议睡前3-4小时完成镁的摄入，以免影响睡眠</div>
+    </div>
+    <div class="target-card card-zn">
+      <div><span class="card-icon">🦪</span><span class="label">锌 Zn</span></div>
+      <div class="value"><span id="totalZn">--</span><span class="unit">mg</span></div>
+      <div class="target-range">目标 15–30 mg</div>
+      <div class="bar-wrap"><div class="bar" id="barZn" style="width:0%"></div></div>
+      <div class="badge-over" id="badgeZn" style="display:none">⚠ 超标</div>
+    </div>
+  </div>
+
+  <!-- ===== Add Product Form ===== -->
+  <div class="add-form">
+    <div class="form-row">
+      <div class="form-group" style="flex:3">
+        <label for="productSelect">选择产品</label>
+        <select id="productSelect" disabled>
+          <option value="">加载中...</option>
+        </select>
+      </div>
+      <div class="form-group" style="flex:1; min-width:0;">
+        <label for="qtyInput">数量</label>
+        <div class="qty-stepper">
+          <button class="stepper-btn" onclick="stepQty(-0.5)" type="button">−</button>
+          <input type="number" id="qtyInput" value="1" min="0.5" step="0.5" disabled>
+          <button class="stepper-btn" onclick="stepQty(0.5)" type="button">+</button>
+        </div>
+      </div>
+      <button class="btn-add" id="btnAdd" onclick="addItem()" disabled>添加</button>
+    </div>
+  </div>
+
+  <!-- ===== Selected Items ===== -->
+  <div class="section-title">
+    已添加产品
+    <span class="count" id="itemCount">0 项</span>
+  </div>
+  <div id="itemList" class="item-list">
+    <div class="empty-state"><div class="icon">📋</div>加载数据后即可添加产品</div>
+  </div>
+  <button class="btn-clear" id="btnClear" style="display:none">清空全部 ←</button>
+
+  <!-- ===== Smart Suggestion Button ===== -->
+  <button class="btn-suggest" id="btnSuggest" onclick="generateSuggestions()" disabled>💡 生成补充建议</button>
+
+  <!-- ===== Suggestions Box ===== -->
+  <div class="suggest-box" id="suggestBox">
+    <h3>📋 补充建议</h3>
+    <div id="suggestContent"></div>
+  </div>
+
+  <!-- ===== Quick Tips ===== -->
+  <div class="tips">
+    <h3>📝 每日推荐参考</h3>
+    <ul>
+      <li>盐 10–15 克 → 钠约 3900–5850 mg</li>
+      <li>钾（柠檬酸钾等）：2000–3000 mg</li>
+      <li>镁（柠檬酸镁/甘氨酸镁等）：400–600 mg</li>
+      <li>锌（微量元素粉剂等）：15–30 mg</li>
+    </ul>
+  </div>
+
+  <!-- ===== Sleep Section ===== -->
+  <div class="sleep-section" id="sleepSection">
+    <div class="sleep-header">🌙 睡前补充</div>
+    <div class="sleep-row">
+      <div class="sleep-icon ca">🦴</div>
+      <div class="sleep-info">
+        <div class="sleep-label">钙 200mg</div>
+        <div class="sleep-detail">柠檬酸钙 1 克（固定量）</div>
+      </div>
+      <div class="sleep-check" id="sleepCaCheck" onclick="toggleSleepCa()">✓</div>
+    </div>
+    <div class="sleep-row">
+      <div class="sleep-icon mg">💎</div>
+      <div class="sleep-info">
+        <div class="sleep-label">镁（可选 · 计入当日总量）</div>
+        <div class="sleep-mg-select">
+          <select id="sleepMgSelect"></select>
+          <div class="sleep-mg-stepper">
+            <button onclick="sleepMgStep(-0.5)">−</button>
+            <input type="number" id="sleepMgQty" value="1" min="0.5" step="0.5">
+            <button onclick="sleepMgStep(0.5)">+</button>
+          </div>
+          <div class="sleep-check" id="sleepMgCheck" onclick="toggleSleepMg()" style="flex-shrink:0;">✓</div>
+        </div>
+        <div class="sleep-mg-result" id="sleepMgResult">预计补充：—</div>
+      </div>
+    </div>
+    <button class="sleep-btn-mark" id="sleepBtnMark" onclick="markSleepTaken()">✓ 标记睡前已服用</button>
+    <div class="sleep-stats" id="sleepStats" style="display:none;">
+      <span id="sleepCaStatus">🦴 钙 ✗</span>
+      <span id="sleepMgStatus">💎 镁 ✗</span>
+    </div>
+  </div>
+
+  <!-- ===== Disclaimer ===== -->
+  <div class="disclaimer">
+    <strong>⚠️ 特别说明：</strong><br>
+    本品为原料制品，仅供科研使用，非正式药物和食品保健品，请规范使用！
+  </div>
+
+  <div class="footer">
+    © 2026 OrthoMolecularVita™ | 科普内容仅供参考
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA — loaded asynchronously from data/products.json
+// ============================================================
+let DATA = null;  // populated by loadData()
+
+// ============================================================
+// SLEEP STATE
+// ============================================================
+let sleepState = { caTaken: false, mgTaken: false, mgPid: 11, mgQty: 1 };
+let items = [];
+
+// ============================================================
+// DATA LOADING with localStorage cache
+// ============================================================
+const DATA_URL = 'data/products.json';
+const CACHE_KEY = 'nutri_products_cache';
+
+async function loadData() {
+  const loading = document.getElementById('loadingScreen');
+  const errorBanner = document.getElementById('errorBanner');
+  errorBanner.classList.remove('show');
+  loading.classList.remove('hidden');
+
+  // 1. Try localStorage cache first
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      // Validate cache has required fields
+      if (parsed && parsed.products && parsed.targets) {
+        DATA = parsed;
+        loading.classList.add('hidden');
+        onDataReady();
+        return;
+      }
+    }
+  } catch(e) {}
+
+  // 2. Fetch from network
+  try {
+    const resp = await fetch(DATA_URL + '?t=' + Date.now()); // bust cache
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    DATA = await resp.json();
+    // Cache for offline / faster reload
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(DATA)); } catch(e) {}
+    loading.classList.add('hidden');
+    onDataReady();
+  } catch (err) {
+    loading.classList.add('hidden');
+    errorBanner.classList.add('show');
+    document.getElementById('errorText').textContent =
+      '产品数据加载失败 (' + err.message + ')，请检查网络后重试';
+    // Disable form
+    document.getElementById('productSelect').disabled = true;
+    document.getElementById('qtyInput').disabled = true;
+    document.getElementById('btnAdd').disabled = true;
+    document.getElementById('btnSuggest').disabled = true;
+  }
+}
+
+function onDataReady() {
+  // Enable UI
+  document.getElementById('productSelect').disabled = false;
+  document.getElementById('qtyInput').disabled = false;
+  document.getElementById('btnAdd').disabled = false;
+  document.getElementById('btnSuggest').disabled = false;
+
+  // Start app
+  populateSelect();
+  loadState();
+  renderItems();
+  updateTotals();
+  populateSleepMg();
+  loadSleepState();
+  renderSleepState();
+}
+
+// ============================================================
+// PRODUCT SELECT
+// ============================================================
+function populateSelect() {
+  const sel = document.getElementById('productSelect');
+  sel.innerHTML = '<option value="">— 请选择产品 —</option>';
+
+  DATA.categories.forEach(cat => {
+    const group = document.createElement('optgroup');
+    group.label = cat.label;
+
+    cat.ids.forEach(pid => {
+      const p = DATA.products.find(x => x.id === pid);
+      if (!p) return;
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      const icon = DATA.catIcons[pid] || '';
+      const parts = [];
+      if (p.Na > 0) parts.push('钠' + p.Na);
+      if (p.K  > 0) parts.push('钾' + p.K);
+      if (p.Mg > 0) parts.push('镁' + p.Mg);
+      if (p.Ca > 0) parts.push('钙' + p.Ca);
+      if (p.Zn > 0) parts.push('锌' + p.Zn);
+      const hint = parts.join(' ');
+      opt.textContent = icon + ' ' + p.name + ' (' + p.spec + ')' + (hint ? '  → ' + hint : '');
+      group.appendChild(opt);
+    });
+    sel.appendChild(group);
+  });
+}
+
+// ============================================================
+// STATE PERSISTENCE (localStorage)
+// ============================================================
+function saveState() {
+  try { localStorage.setItem('nutri_calc_items', JSON.stringify(items)); } catch(e) {}
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem('nutri_calc_items');
+    if (raw) items = JSON.parse(raw);
+  } catch(e) { items = []; }
+}
+
+// ============================================================
+// ADD / REMOVE / CLEAR
+// ============================================================
+function addItem() {
+  const sel = document.getElementById('productSelect');
+  const qtyInput = document.getElementById('qtyInput');
+  const pid = parseInt(sel.value);
+  const qty = parseFloat(qtyInput.value) || 1;
+
+  if (!pid || isNaN(pid)) {
+    sel.style.borderColor = '#e74c3c';
+    setTimeout(() => sel.style.borderColor = '', 800);
+    return;
+  }
+  const product = DATA.products.find(p => p.id === pid);
+  if (!product) return;
+  if (qty <= 0) { qtyInput.value = 1; return; }
+
+  const existing = items.findIndex(i => i.productId === pid);
+  if (existing >= 0) {
+    items[existing].qty = Math.round((items[existing].qty + qty) * 10) / 10;
+  } else {
+    items.push({ productId: pid, product, qty });
+  }
+  saveState();
+  renderItems();
+  updateTotals();
+  setTimeout(() => {
+    const cards = document.querySelectorAll('.item-card');
+    if (cards.length > 0) cards[cards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 100);
+}
+
+function removeItem(index) { items.splice(index, 1); saveState(); renderItems(); updateTotals(); }
+function clearAll() { if (items.length === 0) return; items = []; saveState(); renderItems(); updateTotals(); }
+document.getElementById('btnClear').addEventListener('click', clearAll);
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderItems() {
+  const list = document.getElementById('itemList');
+  const count = document.getElementById('itemCount');
+  const btnClear = document.getElementById('btnClear');
+  count.textContent = items.length + ' 项';
+  btnClear.style.display = items.length > 0 ? 'block' : 'none';
+  if (items.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">📋</div>还没有添加产品<br>请在上方选择并添加</div>';
+    return;
+  }
+  let html = '';
+  items.forEach((item, idx) => {
+    const p = item.product;
+    const qty = item.qty;
+    const parts = [];
+    if (p.Na > 0) parts.push('钠 ' + (p.Na * qty) + 'mg');
+    if (p.K  > 0) parts.push('钾 ' + (p.K * qty) + 'mg');
+    if (p.Mg > 0) parts.push('镁 ' + (p.Mg * qty) + 'mg');
+    if (p.Ca > 0) parts.push('钙 ' + (p.Ca * qty) + 'mg');
+    if (p.Zn > 0) parts.push('锌 ' + (p.Zn * qty) + 'mg');
+    const nutrientStr = parts.join(' · ');
+    const unitDisplay = specUnit(p.spec);
+    html +=
+      '<div class="item-card">' +
+        '<div class="item-info">' +
+          '<div class="item-name">' + escHtml(p.name) + '</div>' +
+          '<div class="item-spec">' + escHtml(p.spec) + (qty !== 1 ? ' × ' + qty : '') + '</div>' +
+          (nutrientStr ? '<div class="item-nutrients"><span>' + nutrientStr + '</span></div>' : '') +
+        '</div>' +
+        '<div class="item-qty">' + qty + ' ' + unitDisplay + '</div>' +
+        '<button class="btn-del" onclick="removeItem(' + idx + ')" title="删除">✕</button>' +
+      '</div>';
+  });
+  list.innerHTML = html;
+}
+
+function escHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ============================================================
+// TOTALS
+// ============================================================
+function updateTotals() {
+  if (!DATA) return;
+  const TARGETS = DATA.targets;
+  const totals = { Na: 0, K: 0, Mg: 0, Zn: 0 };
+  items.forEach(item => {
+    const p = item.product;
+    const q = item.qty;
+    totals.Na += (p.Na || 0) * q;
+    totals.K  += (p.K  || 0) * q;
+    totals.Mg += (p.Mg || 0) * q;
+    totals.Zn += (p.Zn || 0) * q;
+  });
+  if (sleepState.mgTaken) {
+    const sp = DATA.products.find(p => p.id === sleepState.mgPid);
+    if (sp) totals.Mg += (sp.Mg || 0) * sleepState.mgQty;
+  }
+  ['Na','K','Mg','Zn'].forEach(key => { totals[key] = Math.round(totals[key]); });
+  document.getElementById('totalNa').textContent = totals.Na;
+  document.getElementById('totalK').textContent  = totals.K;
+  document.getElementById('totalMg').textContent = totals.Mg;
+  document.getElementById('totalZn').textContent = totals.Zn;
+  document.getElementById('mgSleepTag').style.display = sleepState.mgTaken ? 'inline' : 'none';
+  updateBar('Na', TARGETS.Na, totals.Na);
+  updateBar('K',  TARGETS.K,  totals.K);
+  updateBar('Mg', TARGETS.Mg, totals.Mg);
+  updateBar('Zn', TARGETS.Zn, totals.Zn);
+}
+
+function updateBar(key, target, value) {
+  const bar = document.getElementById('bar' + key);
+  const badge = document.getElementById('badge' + key);
+  const pct = target.low > 0 ? Math.min((value / target.low) * 100, 100) : 0;
+  bar.style.width = pct + '%';
+  bar.classList.remove('over', 'warning');
+  badge.style.display = 'none';
+  if (value > target.high) {
+    bar.classList.add('over');
+    badge.style.display = 'block';
+  } else if (value < target.low && value >= target.low * 0.8) {
+    bar.classList.add('warning');
+  }
+}
+
+document.getElementById('qtyInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') addItem();
+});
+
+function stepQty(delta) {
+  const input = document.getElementById('qtyInput');
+  let v = parseFloat(input.value) || 1;
+  v = Math.round((v + delta) * 10) / 10;
+  if (v < 0.5) v = 0.5;
+  if (v > 999) v = 999;
+  input.value = v;
+}
+document.getElementById('productSelect').addEventListener('change', function() {
+  document.getElementById('qtyInput').value = 1;
+});
+
+// ============================================================
+// HELPERS
+// ============================================================
+function specUnit(spec) {
+  if (!spec) return '份';
+  if (spec.includes('/')) return spec.split('/')[1];
+  return spec.replace(/^[\d.]+/, '');
+}
+
+// ============================================================
+// SMART SUGGESTIONS
+// ============================================================
+const SUGGEST_MULTIPLIER = 1.15;
+
+function generateSuggestions() {
+  const box = document.getElementById('suggestBox');
+  const content = document.getElementById('suggestContent');
+  box.classList.remove('show');
+  if (!DATA) return;
+  const TARGETS = DATA.targets;
+  const NUTRIENT_OPTIONS = DATA.nutrientOptions;
+  const NUTRIENT_ICONS = DATA.nutrientIcons;
+  const COMBOS = DATA.combos;
+
+  if (items.length === 0) {
+    box.classList.add('show');
+    content.innerHTML = '<div style="text-align:center;padding:16px;color:#999;font-size:0.85rem;">请先添加已吃的产品，再生成建议</div>';
+    return;
+  }
+
+  const totals = { Na: 0, K: 0, Mg: 0, Zn: 0, Ca: 0 };
+  items.forEach(item => {
+    const p = item.product; const q = item.qty;
+    totals.Na += (p.Na || 0) * q;
+    totals.K  += (p.K  || 0) * q;
+    totals.Mg += (p.Mg || 0) * q;
+    totals.Zn += (p.Zn || 0) * q;
+    totals.Ca += (p.Ca || 0) * q;
+  });
+  ['Na','K','Mg','Zn'].forEach(k => totals[k] = Math.round(totals[k]));
+
+  const suggestTarget = {};
+  ['Na','K','Mg','Zn'].forEach(k => {
+    suggestTarget[k] = {
+      low: Math.round(TARGETS[k].low * SUGGEST_MULTIPLIER),
+      high: TARGETS[k].high
+    };
+  });
+
+  function calcDeficits(totals, useSuggest) {
+    const tgt = useSuggest ? suggestTarget : TARGETS;
+    const def = {};
+    ['Na','K','Mg','Zn'].forEach(k => { def[k] = Math.max(0, tgt[k].low - totals[k]); });
+    return def;
+  }
+
+  const deficits = calcDeficits(totals, true);
+  const deficientKeys = ['Na','K','Mg','Zn'].filter(k => deficits[k] > 10);
+
+  if (deficientKeys.length === 0) {
+    box.classList.add('show');
+    content.innerHTML = '<div class="suggest-allset"><div class="icon">✅</div>各项指标均已达标！</div>';
+    return;
+  }
+
+  let html = '';
+  const summaryParts = deficientKeys.map(k => TARGETS[k].name + ' 差 ' + deficits[k] + 'mg');
+  html += '<div class="s-summary">📊 目前' + summaryParts.join('，') + '</div>';
+
+  function findBestCombo(deficits, totals) {
+    let best = null, bestScore = 0;
+    COMBOS.forEach(c => {
+      let maxSafe = Infinity, score = 0, covered = { Na: 0, K: 0, Mg: 0, Zn: 0 };
+      ['Na','K','Mg','Zn'].forEach(key => {
+        if (c[key] === 0) return;
+        const current = totals[key] || 0;
+        const upper = TARGETS[key].high;
+        if (deficits[key] > 0) {
+          const needed = deficits[key] / c[key];
+          const room = (upper - current) / c[key];
+          const safe = Math.min(needed, room);
+          if (safe < maxSafe) maxSafe = safe;
+          covered[key] = Math.round(Math.min(deficits[key], safe * c[key]));
+          score += covered[key];
+        } else {
+          const room = (upper - current) / c[key];
+          if (room < maxSafe) maxSafe = room;
+        }
+      });
+      if (maxSafe < 0.5) return;
+      const servings = Math.floor(maxSafe * 2) / 2;
+      if (servings < 0.5) return;
+      if (score > bestScore) { bestScore = score; best = { combo: c, servings, covered }; }
+    });
+    return best;
+  }
+
+  let remaining = { ...deficits };
+
+  if (deficientKeys.length >= 2) {
+    const combo = findBestCombo(remaining, totals);
+    if (combo) {
+      const c = combo.combo;
+      const lines = []; let hasAny = false; const projText = [];
+      ['Na','K','Mg','Zn'].forEach(key => {
+        const cvd = combo.covered[key] || 0;
+        if (cvd > 0) { lines.push(TARGETS[key].name + ' +' + cvd + 'mg'); remaining[key] = Math.max(0, remaining[key] - cvd); hasAny = true; }
+        if (c[key] > 0) {
+          const after = Math.round(totals[key] + c[key] * combo.servings);
+          const icon = after >= TARGETS[key].low ? (after <= TARGETS[key].high ? '✅' : '⚠️超') : '⬆️';
+          projText.push(TARGETS[key].name + icon + after + 'mg');
+        }
+      });
+      if (hasAny) {
+        const p = DATA.products.find(p => p.id === c.pid);
+        html +=
+          '<div style="font-size:0.8rem;font-weight:600;color:#764ba2;margin:0 0 8px 0;">📦 复合推荐（一次补多种）</div>' +
+          '<div class="suggest-item" style="background:#faf8ff;border-radius:10px;padding:12px;margin-bottom:10px;border:1px solid #e8e0ff;">' +
+            '<div style="flex:1">' +
+              '<div style="font-size:0.85rem;font-weight:600;color:#333;">' + c.icon + ' ' + escHtml(p.name) + ' × ' + combo.servings + specUnit(p.spec) + '</div>' +
+              '<div style="font-size:0.75rem;color:#666;margin-top:3px;">可补充：' + lines.join(' · ') + '</div>' +
+              '<div style="font-size:0.68rem;color:#999;margin-top:2px;">添加后：' + projText.join(' / ') + '</div>' +
+            '</div>' +
+            '<button class="s-btn-add" onclick="quickAdd(' + p.id + ',' + combo.servings + ')">添加</button>' +
+          '</div>';
+      }
+    }
+  }
+
+  deficientKeys.forEach(key => {
+    const options = NUTRIENT_OPTIONS[key];
+    if (!options || options.length === 0) return;
+    const deficit = deficits[key];
+    if (deficit < 10) return;
+    html +=
+      '<div style="font-size:0.8rem;font-weight:600;color:#333;margin:12px 0 6px 0;">' +
+        NUTRIENT_ICONS[key] + ' 补' + TARGETS[key].name + '（还差 ' + deficit + 'mg）' +
+      '</div>';
+    options.forEach(opt => {
+      const product = DATA.products.find(p => p.id === opt.pid);
+      if (!product) return;
+      const qty = Math.ceil(deficit / opt.content * 2) / 2;
+      const covered = Math.round(qty * opt.content);
+      const after = Math.round((totals[key] || 0) + covered);
+      const status = after >= TARGETS[key].low ? (after <= TARGETS[key].high ? '✅' : '⚠️超') : '⬆️';
+      const unitDisplay = opt.spec.includes('/') ? opt.spec.split('/')[1] : '克';
+      html +=
+        '<div class="suggest-item">' +
+          '<div class="s-icon ' + key.toLowerCase() + '">' + opt.icon + '</div>' +
+          '<div class="s-info">' +
+            '<div class="s-action">' + escHtml(opt.label) + ' ' + qty + unitDisplay + '</div>' +
+            '<div class="s-detail">可补充 <span>+' + covered + 'mg</span>' +
+              (opt.note ? ' · ' + opt.note : '') +
+              '<br><span style="font-size:0.68rem;color:#999;">添加后：' + TARGETS[key].name + status + after + 'mg</span>' +
+            '</div>' +
+          '</div>' +
+          '<button class="s-btn-add" onclick="quickAdd(' + opt.pid + ',' + qty + ')">添加</button>' +
+        '</div>';
+    });
+  });
+
+  content.innerHTML = html;
+  box.classList.add('show');
+  setTimeout(() => { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 100);
+}
+
+function quickAdd(pid, qty) {
+  const product = DATA.products.find(p => p.id === pid);
+  if (!product) return;
+  items.push({ productId: pid, product, qty });
+  saveState();
+  renderItems();
+  updateTotals();
+  generateSuggestions();
+}
+
+// ============================================================
+// SLEEP SECTION
+// ============================================================
+function sleepMgProduct() {
+  return DATA ? (DATA.products.find(p => p.id === sleepState.mgPid) || DATA.products[10]) : null;
+}
+function updateSleepMgResult() {
+  const p = sleepMgProduct();
+  if (!p) return;
+  const qty = sleepState.mgQty;
+  const mgAdded = Math.round((p.Mg || 0) * qty);
+  const unit = specUnit(p.spec);
+  document.getElementById('sleepMgResult').textContent =
+    '预计补充：' + mgAdded + 'mg Mg（' + p.name + ' ' + qty + unit + '）';
+}
+function sleepMgStep(delta) {
+  let v = parseFloat(sleepState.mgQty) || 1;
+  v = Math.round((v + delta) * 10) / 10;
+  if (v < 0.5) v = 0.5;
+  if (v > 10) v = 10;
+  sleepState.mgQty = v;
+  document.getElementById('sleepMgQty').value = v;
+  updateSleepMgResult();
+  saveSleepState();
+}
+function toggleSleepCa() {
+  sleepState.caTaken = !sleepState.caTaken;
+  document.getElementById('sleepCaCheck').classList.toggle('done', sleepState.caTaken);
+  updateSleepStats();
+  saveSleepState();
+}
+function toggleSleepMg() {
+  sleepState.mgTaken = !sleepState.mgTaken;
+  document.getElementById('sleepMgCheck').classList.toggle('done', sleepState.mgTaken);
+  updateSleepMgResult();
+  updateTotals();
+  updateSleepStats();
+  saveSleepState();
+}
+function markSleepTaken() {
+  if (!sleepState.caTaken) { sleepState.caTaken = true; document.getElementById('sleepCaCheck').classList.add('done'); }
+  if (!sleepState.mgTaken) { sleepState.mgTaken = true; document.getElementById('sleepMgCheck').classList.add('done'); }
+  updateSleepStats();
+  updateTotals();
+  saveSleepState();
+  const btn = document.getElementById('sleepBtnMark');
+  btn.textContent = '✅ 已服用';
+  btn.classList.add('done');
+  setTimeout(() => { btn.textContent = '✓ 标记睡前已服用'; btn.classList.remove('done'); }, 2000);
+}
+function updateSleepStats() {
+  const stats = document.getElementById('sleepStats');
+  stats.style.display = 'block';
+  document.getElementById('sleepCaStatus').textContent = '🦴 钙 ' + (sleepState.caTaken ? '✓ 200mg' : '✗');
+  document.getElementById('sleepMgStatus').textContent = '💎 镁 ' + (sleepState.mgTaken ? '✓ 已计入当日' : '✗');
+}
+function populateSleepMg() {
+  const sel = document.getElementById('sleepMgSelect');
+  const mgOpts = [
+    { pid: 13, label: '甘氨酸镁（助眠）' },
+    { pid: 11, label: '柠檬酸镁' },
+    { pid: 12, label: '苏糖酸镁' },
+    { pid: 14, label: '五重镁代管胶囊' },
+    { pid: 19, label: '甜梦静息(原料粉)' },
+    { pid: 22, label: '甜梦静息代灌胶囊' },
+  ];
+  sel.innerHTML = '';
+  mgOpts.forEach(o => {
+    const opt = document.createElement('option');
+    opt.value = o.pid;
+    opt.textContent = o.label;
+    sel.appendChild(opt);
+  });
+  sel.value = sleepState.mgPid;
+  sel.addEventListener('change', function() {
+    sleepState.mgPid = parseInt(this.value);
+    updateSleepMgResult();
+    saveSleepState();
+  });
+  document.getElementById('sleepMgQty').addEventListener('change', function() {
+    const v = parseFloat(this.value) || 1;
+    sleepState.mgQty = Math.max(0.5, Math.min(10, v));
+    this.value = sleepState.mgQty;
+    updateSleepMgResult();
+    saveSleepState();
+  });
+}
+function saveSleepState() { try { localStorage.setItem('nutri_sleep', JSON.stringify(sleepState)); } catch(e) {} }
+function loadSleepState() {
+  try {
+    const raw = localStorage.getItem('nutri_sleep');
+    if (raw) { const parsed = JSON.parse(raw); sleepState = { ...sleepState, ...parsed }; }
+  } catch(e) {}
+}
+function renderSleepState() {
+  document.getElementById('sleepCaCheck').classList.toggle('done', sleepState.caTaken);
+  document.getElementById('sleepMgCheck').classList.toggle('done', sleepState.mgTaken);
+  document.getElementById('sleepMgQty').value = sleepState.mgQty;
+  const sel = document.getElementById('sleepMgSelect');
+  if (sel) sel.value = sleepState.mgPid;
+  updateSleepMgResult();
+  updateSleepStats();
+  if (sleepState.caTaken && sleepState.mgTaken) {
+    const btn = document.getElementById('sleepBtnMark');
+    btn.textContent = '✅ 已服用';
+    btn.classList.add('done');
+    setTimeout(() => { btn.textContent = '✓ 标记睡前已服用'; btn.classList.remove('done'); }, 2000);
+  }
+}
+
+// ============================================================
+// START — load data asynchronously
+// ============================================================
+loadData();
+</script>
+</body>
+</html>
