@@ -701,7 +701,7 @@ function updateSuggestions() {
     }
   }
   needKeys.forEach(key=>{const opts=NO[key];if(!opts||!opts.length)return;if(defs[key]<10)return;
-    html+='<div style="font-size:0.72rem;font-weight:600;color:#374151;margin:8px 0 4px;">'+NI[key]+' 补'+T[key].name+'（还差 '+defs[key]+'mg）</div>';
+    html+='<div class="s-summary" style="margin-bottom:6px;background:#fafbfc;border-left-color:#8b5cf6;">'+NI[key]+' 补'+T[key].name+' <span style="color:#ef4444;font-weight:700;">还差 '+defs[key]+'mg</span></div>';
     opts.forEach(opt=>{const product=DATA.products.find(p=>p.id===opt.pid);if(!product)return;
       const qty=Math.ceil(defs[key]/opt.content*2)/2,covered=Math.round(qty*opt.content),after=Math.round((totals[key]||0)+covered);
       const status=after>=T[key].low?(after<=T[key].high?'✅':'⚠️超'):'⬆️',ud=opt.spec.includes('/')?opt.spec.split('/')[1]:'克';
